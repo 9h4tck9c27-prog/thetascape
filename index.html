@@ -478,8 +478,37 @@ const buffers = {}, loading = {};
 function initAudio() {
   if (AC) { if (AC.state === 'suspended') AC.resume(); return; }
   const C = window.AudioContext || window.webkitAudioContext; if (!C) return;
+  try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
   AC = new C(); master = AC.createGain(); master.gain.value = .9; master.connect(AC.destination);
   if (AC.state === 'suspended') AC.resume();
+  try { const s = AC.createBufferSource(); s.buffer = AC.createBuffer(1, 1, 22050); s.connect(AC.destination); s.start(0); } catch (e) {}
+}
+// World sounds are long, so they stream from an <audio> element instead of being decoded into memory.
+const beds = {};
+function bedFor(key) {
+  if (beds[key]) return beds[key];
+  const a = new Audio(); a.loop = true; a.preload = 'auto'; a.setAttribute('playsinline', ''); a.src = WORLDS[key].audio;
+  const b = { a, g: null, node: null, to: null };
+  if (AC) {
+    b.g = AC.createGain(); b.g.gain.value = 0; b.g.connect(master);
+    const same = new URL(a.src, location.href).origin === location.origin;
+    if (same) { try { b.node = AC.createMediaElementSource(a); b.node.connect(b.g); } catch (e) { b.node = null; } }
+  }
+  beds[key] = b; return b;
+}
+function playBed(key, gain, fadeIn) {
+  const b = bedFor(key); clearTimeout(b.to);
+  if (b.node && AC) { const t = AC.currentTime; b.g.gain.cancelScheduledValues(t); b.g.gain.setValueAtTime(0, t); b.g.gain.linearRampToValueAtTime(gain, t + fadeIn); }
+  else { b.a.volume = 0; let v = 0; clearInterval(b.iv); b.iv = setInterval(() => { v = Math.min(gain, v + gain / (fadeIn * 10)); try { b.a.volume = v; } catch (e) {} if (v >= gain) clearInterval(b.iv); }, 100); }
+  try { b.a.currentTime = 0; } catch (e) {}
+  const p = b.a.play(); if (p && p.catch) p.catch(() => {});
+  return b;
+}
+function stopBed(b, secs) {
+  if (!b) return; clearTimeout(b.to); clearInterval(b.iv);
+  if (b.node && AC) { const t = AC.currentTime; b.g.gain.cancelScheduledValues(t); b.g.gain.setValueAtTime(b.g.gain.value, t); b.g.gain.linearRampToValueAtTime(0, t + secs); }
+  else { let v = b.a.volume; b.iv = setInterval(() => { v = Math.max(0, v - 1 / (secs * 10)); try { b.a.volume = v; } catch (e) {} if (v <= 0) clearInterval(b.iv); }, 100); }
+  b.to = setTimeout(() => b.a.pause(), secs * 1000 + 200);
 }
 function getBuffer(url) {
   if (buffers[url]) return Promise.resolve(buffers[url]);
@@ -539,14 +568,14 @@ function setMode(m) { S.mode = m; S.modeT = clock(); }
 /* start */
 $('#begin').addEventListener('click', () => {
   initAudio();
-  if (AC) { opening = playOnce('audio/opening.mp3', .85, 1.5); ORDER.forEach((k) => getBuffer(WORLDS[k].audio)); getBuffer('audio/bowl-end.mp3'); }
+  if (AC) { opening = playOnce('audio/opening.mp3', .85, 1.5); getBuffer('audio/bowl-end.mp3'); }
   hideAll();
   if (reduceMotion) { setMode('home'); show('#s-home'); } else setMode('fly');
 });
 
 /* home */
 $$('.world').forEach((b) => b.addEventListener('click', () => {
-  S.world = b.dataset.world; $('#worldName').textContent = WORLDS[S.world].name; $('#worldFeel').textContent = WORLDS[S.world].feel;
+  S.world = b.dataset.world; initAudio(); bedFor(S.world).a.load(); $('#worldName').textContent = WORLDS[S.world].name; $('#worldFeel').textContent = WORLDS[S.world].feel;
   const last = load().lastMinutes || 5;
   $$('.time').forEach((t) => t.classList.toggle('last', +t.dataset.min === last));
   setMode('time'); show('#s-time');
@@ -563,8 +592,8 @@ function startSession(min) {
   initAudio(); S.minutes = min; S.sessionLen = min * 60;
   const d = load(); d.lastMinutes = min; save(d);
   if (opening) { fadeOut(opening, 3); opening = null; }
-  if (bed) fadeOut(bed, 1.5);
-  bed = AC ? playLoop(WORLDS[S.world].audio, .8, 4) : null;
+  if (bed) stopBed(bed, 1.5);
+  bed = playBed(S.world, .8, 4);
   keepAwake();
   setMode('enter'); show('#s-count'); $('#count').textContent = '3';
 }
@@ -575,8 +604,8 @@ let hudTimer = null;
 function flashHud() { $('#hud').classList.add('on'); clearTimeout(hudTimer); hudTimer = setTimeout(() => $('#hud').classList.remove('on'), 4000); }
 $('#tapzone').addEventListener('click', flashHud);
 $('#pause').addEventListener('click', () => {
-  if (pausedAt === null) { pausedAt = real(); $('#pause').textContent = 'Resume'; if (AC) AC.suspend(); clearTimeout(hudTimer); $('#hud').classList.add('on'); }
-  else { pausedTotal += real() - pausedAt; pausedAt = null; $('#pause').textContent = 'Pause'; if (AC) AC.resume(); flashHud(); }
+  if (pausedAt === null) { pausedAt = real(); $('#pause').textContent = 'Resume'; if (AC) AC.suspend(); if (bed) bed.a.pause(); clearTimeout(hudTimer); $('#hud').classList.add('on'); }
+  else { pausedTotal += real() - pausedAt; pausedAt = null; $('#pause').textContent = 'Pause'; if (AC) AC.resume(); if (bed) { const p = bed.a.play(); if (p && p.catch) p.catch(() => {}); } flashHud(); }
 });
 $('#endNow').addEventListener('click', () => finish(true));
 
@@ -585,7 +614,7 @@ function finish(early) {
   const done = early ? clamp(clock() - S.sessionStart, 0, S.sessionLen) : S.sessionLen;
   S.doneMin = Math.round(done / 6) / 10;
   if (AC) playOnce('audio/bowl-end.mp3', .9, 0);
-  if (bed) { fadeOut(bed, 9); bed = null; }
+  if (bed) { stopBed(bed, 9); bed = null; }
   try { wake && wake.release(); } catch (e) {} wake = null;
   $('#hud').classList.remove('on');
   setMode('end'); hideAll();
