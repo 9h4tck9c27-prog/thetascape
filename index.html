@@ -84,9 +84,12 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--light);outline-offs
 
 /* countdown & guide */
 #count{font-family:var(--display);font-weight:300;font-size:clamp(96px,16vw,160px);line-height:1;color:#FBEBCB;transition:opacity .4s}
-#s-guide{justify-content:flex-end;padding-bottom:calc(14vh + env(safe-area-inset-bottom,0px))}
+#s-guide,#s-eyes{justify-content:center;gap:10px}
+.inbox{max-width:min(62vw,40vh)}
+#s-guide .line{font-size:clamp(20px,3.2vw,30px)}
+#s-eyes .line{font-size:clamp(18px,2.6vw,26px)}
+#s-eyes .sub{font-size:clamp(13px,1.8vw,16px)}
 #guideText{transition:opacity .6s}
-#s-eyes{justify-content:flex-end;padding-bottom:calc(14vh + env(safe-area-inset-bottom,0px))}
 
 /* session */
 #tapzone{position:fixed;inset:0;width:100%;height:100%}
@@ -172,13 +175,13 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--light);outline-offs
 </section>
 
 <section id="s-guide" class="screen" hidden>
-  <div class="line" id="guideText">Breathe in</div>
+  <div class="line inbox" id="guideText">Breathe in</div>
   <div class="quiet" id="guideStep">1 of 2</div>
 </section>
 
 <section id="s-eyes" class="screen" hidden>
-  <div class="line">Now close your eyes.</div>
-  <div class="sub">Keep breathing in this square. A bowl will ring when you’re done.</div>
+  <div class="line inbox">Now close your eyes.</div>
+  <div class="sub inbox">Keep breathing in this square. A bowl will ring when you’re done.</div>
 </section>
 
 <section id="s-session" class="screen" hidden>
@@ -430,7 +433,7 @@ function drawWorld(g, key, w, h, t, b, scale, alpha) {
 
 /* ---------- breath: box breathing, 4 seconds a side ---------- */
 let breathT0 = 0;
-const PHASES = ['Breathe in', 'Hold', 'Breathe out', 'Hold'];
+const PHASES = ['Breathe in', 'Hold in', 'Breathe out', 'Hold out'];
 function breath(t) {
   const el = t - breathT0, c = ((el % CYCLE) + CYCLE) % CYCLE, n = Math.floor(el / CYCLE);
   const side = Math.floor(c / SIDE), local = c - side * SIDE, p = local / SIDE;
@@ -441,7 +444,7 @@ function breath(t) {
 // across the top as you hold, down the right as you breathe out, across the bottom as you hold.
 // A point on every line marks each second and pulses as the light reaches it.
 function drawBreath(t, alpha, bright) {
-  const br = breath(t), s = Math.min(W, H) * .3, x0 = W / 2 - s / 2, y0 = H / 2 - s / 2;
+  const br = breath(t), s = Math.min(W * .74, H * .5), x0 = W / 2 - s / 2, y0 = H / 2 - s / 2;
   const C = [[x0, y0 + s], [x0, y0], [x0 + s, y0], [x0 + s, y0 + s]]; // bottom-left, top-left, top-right, bottom-right
   const at = (u) => { u = ((u % 1) + 1) % 1; const k = Math.floor(u * 4), f = u * 4 - k, a = C[k], b2 = C[(k + 1) % 4]; return [a[0] + (b2[0] - a[0]) * f, a[1] + (b2[1] - a[1]) * f]; };
   cx.save(); cx.globalAlpha = alpha;
@@ -453,11 +456,11 @@ function drawBreath(t, alpha, bright) {
       const [x, y] = at((k * 4 + q) / 16);
       let since = (br.side === k) ? br.local - q : -1;
       if (q === 0 && br.side === k && br.local < 1) since = br.local;
-      const lit = br.side === k && br.local >= q;
       const pulse = since >= 0 && since < 1 ? 1 - since : 0;
       const r = DPR * (q === 0 ? 2.6 : 2.2) * (1 + 1.6 * pulse * pulse);
-      if (pulse > 0) { const g = cx.createRadialGradient(x, y, 0, x, y, r * 4); g.addColorStop(0, `rgba(244,217,166,${.35 * pulse})`); g.addColorStop(1, 'rgba(244,217,166,0)'); cx.fillStyle = g; cx.beginPath(); cx.arc(x, y, r * 4, 0, 6.283); cx.fill(); }
-      cx.fillStyle = lit ? `rgba(251,235,203,${.55 + .45 * pulse})` : 'rgba(214,218,238,.28)';
+      if (pulse <= 0) continue;
+      const g = cx.createRadialGradient(x, y, 0, x, y, r * 4); g.addColorStop(0, `rgba(244,217,166,${.35 * pulse})`); g.addColorStop(1, 'rgba(244,217,166,0)'); cx.fillStyle = g; cx.beginPath(); cx.arc(x, y, r * 4, 0, 6.283); cx.fill();
+      cx.fillStyle = `rgba(251,235,203,${pulse})`;
       cx.beginPath(); cx.arc(x, y, r, 0, 6.283); cx.fill();
     }
   }
