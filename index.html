@@ -378,11 +378,11 @@ function sparkle(g, x, y, s, a, rot) {
   g.beginPath(); g.moveTo(-s * 3.2, 0); g.lineTo(s * 3.2, 0); g.moveTo(0, -s * 3.2); g.lineTo(0, s * 3.2); g.stroke();
   g.restore();
 }
-function drawMagicStar(g, x, y, size, t, spread, A) {
+function drawMagicStar(g, x, y, size, t, spread, A, calm) {
   if (A === undefined) A = g.globalAlpha;
   if (A <= 0.01) return;
   const R = size * 26 * (spread || 1);
-  const glint = Math.pow(Math.max(0, 1 - (t % 3.1) / .7), 2);
+  const glint = calm ? 0 : Math.pow(Math.max(0, 1 - (t % 3.1) / .7), 2);
   const breathe = .5 + .5 * Math.sin(t * .9);
   // soft aura with a cool rim, like light through a lens
   let grd = g.createRadialGradient(x, y, 0, x, y, R * 1.25);
@@ -401,12 +401,12 @@ function drawMagicStar(g, x, y, size, t, spread, A) {
   // sparkles orbit in 3D: the far ones pass behind the star, the near ones in front
   const pts = orbit.map((o) => { const a = o.ph + t * o.sp; const z = Math.sin(a); return { o, z, x: x + Math.cos(a) * R * .55 * o.r, y: y + z * R * .55 * o.r * o.tilt + Math.sin(t * .7 + o.bob) * size * 1.5 }; });
   const drawPts = (front) => pts.filter((p) => (p.z > 0) === front).forEach((p) => {
-    const depth = .55 + .45 * (p.z + 1) / 2, tw = .45 + .55 * Math.pow(.5 + .5 * Math.sin(t * p.o.tw + p.o.ph), 3);
+    const depth = .55 + .45 * (p.z + 1) / 2, tw = calm ? .55 + .2 * Math.sin(t * p.o.tw * .4 + p.o.ph) : .45 + .55 * Math.pow(.5 + .5 * Math.sin(t * p.o.tw + p.o.ph), 3);
     sparkle(g, p.x, p.y, size * .32 * p.o.sz * depth, A * tw * depth, t * .3 + p.o.ph);
   });
   drawPts(false);
   // two sets of rays turning against each other give the core its depth
-  const core = size * (1 + .08 * Math.sin(t * 2.3) + .06 * Math.sin(t * 5.1) + .5 * glint);
+  const core = size * (1 + (calm ? .03 : .08) * Math.sin(t * 2.3) + (calm ? 0 : .06) * Math.sin(t * 5.1) + .5 * glint);
   g.save(); g.translate(x, y);
   const layers = [[t * .12, 1, 14 + 8 * glint, .7], [-t * .2 + .785, .62, 5.5 + 3 * glint, .42], [t * .07 + .39, .38, 3.5, .25], [-t * .05 + 1.18, .38, 3.5, .25]];
   for (const [rot, w, len, a] of layers) {
@@ -526,7 +526,22 @@ function breath(t) {
 // The light travels the square at one steady speed: up the left side as you breathe in,
 // across the top as you hold, down the right as you breathe out, across the bottom as you hold.
 // Four points on every line mark the count and pulse as the light reaches them.
-function drawBreath(t, alpha, bright) {
+// The count: 1 2 3 4 along each side, the current number bright.
+function drawCount(br, cxp, cyp, alpha) {
+  const cnt = br.local / (SIDE / COUNTS), cur = Math.min(COUNTS - 1, Math.floor(cnt)), f = cnt - cur;
+  const fs = Math.min(W, H) * .075, gap = fs * 1.3;
+  cx.save(); cx.textAlign = 'center'; cx.textBaseline = 'middle';
+  cx.shadowColor = 'rgba(0,0,0,.75)'; cx.shadowBlur = fs * .3; cx.shadowOffsetY = fs * .04;
+  for (let i = 0; i < COUNTS; i++) {
+    const on = i === cur, pop = on ? 1 + .22 * Math.max(0, 1 - f * 4) : .82;
+    cx.globalAlpha = alpha * (on ? 1 : i < cur ? .42 : .2);
+    cx.fillStyle = '#FFFFFF'; cx.font = `${on ? 700 : 500} ${fs * pop}px Figtree, 'Helvetica Neue', sans-serif`;
+    cx.fillText(String(i + 1), cxp + (i - (COUNTS - 1) / 2) * gap, cyp);
+  }
+  cx.restore();
+}
+
+function drawBreath(t, alpha, bright, countAt) {
   const br = breath(t), s = Math.min(W * .74, H * .5), x0 = W / 2 - s / 2, y0 = H / 2 - s / 2;
   const C = [[x0, y0 + s], [x0, y0], [x0 + s, y0], [x0 + s, y0 + s]]; // bottom-left, top-left, top-right, bottom-right
   const at = (u) => { u = ((u % 1) + 1) % 1; const k = Math.floor(u * 4), f = u * 4 - k, a = C[k], b2 = C[(k + 1) % 4]; return [a[0] + (b2[0] - a[0]) * f, a[1] + (b2[1] - a[1]) * f]; };
@@ -554,8 +569,9 @@ function drawBreath(t, alpha, bright) {
     cx.beginPath(); cx.arc(x, y, DPR * 3.4 * (1 - i / 20), 0, 6.283); cx.fill();
   }
   const [x, y] = at(br.u);
-  drawMagicStar(cx, x, y, DPR * 3.4 * (.9 + .15 * bright), t, .62, alpha);
+  drawMagicStar(cx, x, y, DPR * 3.4 * (.9 + .15 * bright), t, .62, alpha, true);
   cx.restore();
+  if (countAt) drawCount(br, W / 2, countAt === 'center' ? H / 2 : H / 2 + s * .3, alpha);
   return br;
 }
 
@@ -572,7 +588,7 @@ function drawSquareIn(t, prog, alpha) {
   let tip;
   if (prog >= 1) { tip = C[0]; } else { const k = corners, f = prog * 4 - k, a = C[k], b2 = C[(k + 1) % 4]; tip = [a[0] + (b2[0] - a[0]) * f, a[1] + (b2[1] - a[1]) * f]; }
   cx.globalAlpha = alpha * clamp(prog * 6, 0, 1);
-  drawMagicStar(cx, tip[0], tip[1], DPR * 3.4, t, .62);
+  drawMagicStar(cx, tip[0], tip[1], DPR * 3.4, t, .62, cx.globalAlpha, true);
   cx.restore();
 }
 
@@ -859,7 +875,7 @@ function frame() {
       drawWorld(cx, S.world, W, H, t * .5, br.b, 1, 1);
       let bright = 1;
       if (S.mode === 'session') bright = .85 + .45 * clamp((t - S.sessionStart) / S.sessionLen, 0, 1);
-      drawBreath(t, 1, bright);
+      drawBreath(t, 1, bright, S.mode === 'session' ? 'center' : 'below');
       if (S.mode === 'guide') {
         const ahead = breath(t + .25), txt = PHASES[ahead.side];
         const gt = $('#guideText'); if (gt.dataset.txt !== txt) { gt.dataset.txt = txt; gt.style.opacity = 0; setTimeout(() => { gt.textContent = txt; gt.style.opacity = 1; }, 250); }
