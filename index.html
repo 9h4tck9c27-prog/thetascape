@@ -180,7 +180,6 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--light);outline-offs
 
 <section id="s-guide" class="screen" hidden>
   <div class="line inbox" id="guideText">Breathe in</div>
-  <div class="quiet" id="guideStep">1 of 2</div>
 </section>
 
 <section id="s-eyes" class="screen" hidden>
@@ -823,7 +822,6 @@ function frame() {
       if (S.mode === 'guide') {
         const ahead = breath(t + .25), txt = PHASES[ahead.side];
         const gt = $('#guideText'); if (gt.dataset.txt !== txt) { gt.dataset.txt = txt; gt.style.opacity = 0; setTimeout(() => { gt.textContent = txt; gt.style.opacity = 1; }, 250); }
-        $('#guideStep').textContent = (br.n + 1) + ' of 2';
         if (t - breathT0 >= CYCLE * 2) { setMode('eyes'); show('#s-eyes'); }
       } else if (S.mode === 'eyes') {
         if (e >= 6) { S.sessionStart = clock(); setMode('session'); show('#s-session'); }
