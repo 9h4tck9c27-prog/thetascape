@@ -85,20 +85,22 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--light);outline-offs
 .back{position:fixed;top:calc(14px + env(safe-area-inset-top,0px));left:max(16px,env(safe-area-inset-left,0px));font-size:18px;color:var(--soft);padding:10px 4px}
 
 /* countdown & guide */
-#count{font-family:var(--display);font-weight:300;font-size:clamp(96px,16vw,160px);line-height:1;color:#FBEBCB;transition:opacity .4s}
+#count{font-family:var(--display);font-weight:400;text-shadow:0 2px 20px rgba(0,0,0,.6);font-size:clamp(96px,16vw,160px);line-height:1;color:#FBEBCB;transition:opacity .4s}
 #s-guide,#s-eyes{justify-content:center;gap:10px}
-.inbox{max-width:min(66vw,44vh)}
-#s-guide .line{font-size:clamp(28px,4vw,40px)}
-#s-eyes .line{font-size:clamp(26px,3.4vw,34px)}
-#s-eyes .sub{font-size:clamp(18px,2.2vw,21px)}
+.inbox{max-width:min(70vw,46vh)}
+#s-guide .line,#s-eyes .line{color:#FFFFFF;font-weight:600;text-shadow:0 2px 14px rgba(0,0,0,.75),0 0 2px rgba(0,0,0,.6)}
+#s-guide .line{font-size:clamp(38px,6.5vw,56px);line-height:1.15}
+#guideStep{font-size:22px;font-weight:600;color:#FFFFFF;opacity:.9;text-shadow:0 2px 10px rgba(0,0,0,.7)}
+#s-eyes .line{font-size:clamp(32px,5vw,44px);line-height:1.2}
+#s-eyes .sub{font-size:clamp(20px,2.8vw,26px);color:#FFFFFF;font-weight:500;text-shadow:0 2px 12px rgba(0,0,0,.75)}
 #guideText{transition:opacity .6s}
 
 /* session */
 #tapzone{position:fixed;inset:0;width:100%;height:100%}
-#hud{position:fixed;left:0;right:0;bottom:calc(28px + env(safe-area-inset-bottom,0px));display:flex;justify-content:center;align-items:center;gap:20px;opacity:.32;transition:opacity 1.2s ease}
+#hud{position:fixed;left:0;right:0;bottom:calc(28px + env(safe-area-inset-bottom,0px));display:flex;justify-content:center;align-items:center;gap:20px;opacity:.6;transition:opacity 1.2s ease}
 #hud.on{opacity:1;transition:opacity .4s ease}
-#left{font-variant-numeric:tabular-nums;font-size:20px;color:var(--soft);min-width:64px}
-.pill{border:1px solid var(--line);border-radius:999px;padding:12px 24px;font-size:18px;background:rgba(18,21,42,.45);backdrop-filter:blur(6px)}
+#left{font-variant-numeric:tabular-nums;font-size:24px;font-weight:600;color:#FFFFFF;min-width:72px;text-shadow:0 2px 10px rgba(0,0,0,.7)}
+.pill{border:1.5px solid rgba(255,255,255,.55);border-radius:999px;padding:12px 24px;font-size:19px;font-weight:600;color:#FFFFFF;background:rgba(12,14,30,.6);backdrop-filter:blur(6px)}
 
 /* end */
 #s-end .q{font-family:var(--display);font-weight:300;font-size:clamp(34px,5vw,48px)}
@@ -508,8 +510,10 @@ function drawBreath(t, alpha, bright) {
   const C = [[x0, y0 + s], [x0, y0], [x0 + s, y0], [x0 + s, y0 + s]]; // bottom-left, top-left, top-right, bottom-right
   const at = (u) => { u = ((u % 1) + 1) % 1; const k = Math.floor(u * 4), f = u * 4 - k, a = C[k], b2 = C[(k + 1) % 4]; return [a[0] + (b2[0] - a[0]) * f, a[1] + (b2[1] - a[1]) * f]; };
   cx.save(); cx.globalAlpha = alpha;
-  cx.fillStyle = `rgba(244,217,166,${.035 * br.b})`; cx.fillRect(x0, y0, s, s);
-  cx.strokeStyle = 'rgba(214,218,238,.3)'; cx.lineWidth = Math.max(1, DPR * 1.1); cx.lineJoin = 'round';
+  cx.fillStyle = 'rgba(8,10,22,.22)'; cx.fillRect(0, 0, W, H);
+  cx.fillStyle = 'rgba(8,10,22,.5)'; cx.fillRect(x0, y0, s, s);
+  cx.fillStyle = `rgba(244,217,166,${.06 * br.b})`; cx.fillRect(x0, y0, s, s);
+  cx.strokeStyle = 'rgba(255,255,255,.82)'; cx.lineWidth = Math.max(2, DPR * 2); cx.lineJoin = 'round';
   cx.strokeRect(x0, y0, s, s);
   for (let k = 0; k < 4; k++) {
     for (let q = 0; q < 4; q++) {
@@ -517,7 +521,7 @@ function drawBreath(t, alpha, bright) {
       let since = (br.side === k) ? br.local - q : -1;
       if (q === 0 && br.side === k && br.local < 1) since = br.local;
       const pulse = since >= 0 && since < 1 ? 1 - since : 0;
-      const r = DPR * (q === 0 ? 2.6 : 2.2) * (1 + 1.6 * pulse * pulse);
+      const r = DPR * (q === 0 ? 4 : 3.4) * (1 + 1.6 * pulse * pulse);
       if (pulse <= 0) continue;
       const g = cx.createRadialGradient(x, y, 0, x, y, r * 4); g.addColorStop(0, `rgba(244,217,166,${.35 * pulse})`); g.addColorStop(1, 'rgba(244,217,166,0)'); cx.fillStyle = g; cx.beginPath(); cx.arc(x, y, r * 4, 0, 6.283); cx.fill();
       cx.fillStyle = `rgba(251,235,203,${pulse})`;
@@ -527,10 +531,10 @@ function drawBreath(t, alpha, bright) {
   for (let i = 16; i >= 1; i--) {
     const [x, y] = at(br.u - i * .0035);
     cx.fillStyle = `rgba(255,236,200,${.16 * (1 - i / 17)})`;
-    cx.beginPath(); cx.arc(x, y, DPR * 2.2 * (1 - i / 20), 0, 6.283); cx.fill();
+    cx.beginPath(); cx.arc(x, y, DPR * 3.4 * (1 - i / 20), 0, 6.283); cx.fill();
   }
   const [x, y] = at(br.u);
-  drawStar(cx, x, y, DPR * 3.2, bright, t);
+  drawStar(cx, x, y, DPR * 5, Math.max(1.1, bright), t);
   cx.restore();
   return br;
 }
