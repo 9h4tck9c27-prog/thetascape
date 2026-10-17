@@ -18,18 +18,18 @@ There's no build step and no framework. The app is one HTML file.
 
 ## Sounds
 
-The sound files aren't in this repository because they're licensed separately. To hear the app, add these files to an `audio/` folder next to `index.html`:
+The four world sounds are included in `audio/`. Each is a 10-minute piece, and they loop with an 8-second crossfade if a session runs longer.
 
-| File | Plays |
-| --- | --- |
-| `audio/opening.mp3` | Once, when you tap the star |
-| `audio/grid.mp3` | Looping in the Grid world |
-| `audio/contour.mp3` | Looping in the Contour world |
-| `audio/tide.mp3` | Looping in the Tide world |
-| `audio/bloom.mp3` | Looping in the Bloom world |
-| `audio/bowl-end.mp3` | Once, when a session ends |
+| File | Plays | Included |
+| --- | --- | --- |
+| `audio/grid.mp3` | In the Grid world | Yes |
+| `audio/contour.mp3` | In the Contour world | Yes |
+| `audio/tide.mp3` | In the Tide world | Yes |
+| `audio/bloom.mp3` | In the Bloom world | Yes |
+| `audio/opening.mp3` | Once, when you tap the star | No, licensed separately |
+| `audio/bowl-end.mp3` | Once, when a session ends | No, licensed separately |
 
-Without them the app still runs, silently. World sounds loop with an 8-second crossfade, so any length works.
+Add the last two files to `audio/` to hear the opening flute and the closing bowl. Without them those moments are simply silent.
 
 ## Run it locally
 
@@ -45,7 +45,7 @@ Then open http://localhost:8000. Opening `index.html` directly as a file also wo
 2. Under **Build and deployment**, choose **Deploy from a branch**, pick `main` and the root folder, then **Save**.
 3. After a minute the app is live at `https://<your-username>.github.io/thetascape/`.
 
-Because the sounds are excluded from this public repository, a site published this way will be silent until the sounds are hosted somewhere you're licensed to put them.
+A site published this way plays the four world sounds. The opening flute and closing bowl stay silent until those two files are hosted somewhere you're licensed to put them.
 
 ## Before launch
 

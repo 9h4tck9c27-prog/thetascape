@@ -1,6 +1,7 @@
-# Sounds are licensed separately and are not part of this repository.
-audio/
+# The four world sounds in audio/ are included. The opening flute and the
+# closing bowl are licensed separately and stay out of this repository.
+audio/opening.mp3
+audio/bowl-end.mp3
 *.wav
-*.mp3
 *.m4a
 .DS_Store
