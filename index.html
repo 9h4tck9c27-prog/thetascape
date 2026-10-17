@@ -134,7 +134,7 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--light);outline-offs
   <button id="fs" aria-label="Full screen"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C9CCDD" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
   <div class="home-top">
     <div class="mark">THETASCAPE</div>
-    <div class="sub">Pick a world. Follow the light.<br>Feel calmer in a few minutes.</div>
+    <div class="sub">Pick a world. Follow the light around the square.<br>Feel calmer in a few minutes.</div>
   </div>
   <div class="worlds">
     <button class="world" data-world="grid"><canvas></canvas><span>Grid</span></button>
@@ -172,13 +172,13 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--light);outline-offs
 </section>
 
 <section id="s-guide" class="screen" hidden>
-  <div class="line" id="guideText">Breathe in with the light</div>
+  <div class="line" id="guideText">Breathe in</div>
   <div class="quiet" id="guideStep">1 of 2</div>
 </section>
 
 <section id="s-eyes" class="screen" hidden>
   <div class="line">Now close your eyes.</div>
-  <div class="sub">Keep this gentle pace. A bowl will ring when you’re done.</div>
+  <div class="sub">Keep breathing in this square. A bowl will ring when you’re done.</div>
 </section>
 
 <section id="s-session" class="screen" hidden>
@@ -277,7 +277,7 @@ const WORLDS = {
   bloom:   { name: 'Bloom',   feel: 'Open and warm',     audio: 'audio/bloom.mp3' }
 };
 const ORDER = ['grid', 'contour', 'tide', 'bloom'];
-const IN = 4, OUT = 6, CYCLE = IN + OUT;
+const SIDE = 4, CYCLE = SIDE * 4;
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => Array.from(document.querySelectorAll(s));
@@ -428,30 +428,45 @@ function drawWorld(g, key, w, h, t, b, scale, alpha) {
   g.restore();
 }
 
-/* ---------- breath ---------- */
+/* ---------- breath: box breathing, 4 seconds a side ---------- */
 let breathT0 = 0;
+const PHASES = ['Breathe in', 'Hold', 'Breathe out', 'Hold'];
 function breath(t) {
-  const c = ((t - breathT0) % CYCLE + CYCLE) % CYCLE, n = Math.floor((t - breathT0) / CYCLE);
-  if (c < IN) return { inhale: true, p: c / IN, b: ease(c / IN), n, local: c };
-  return { inhale: false, p: (c - IN) / OUT, b: 1 - ease((c - IN) / OUT), n, local: c - IN };
+  const el = t - breathT0, c = ((el % CYCLE) + CYCLE) % CYCLE, n = Math.floor(el / CYCLE);
+  const side = Math.floor(c / SIDE), local = c - side * SIDE, p = local / SIDE;
+  const b = side === 0 ? ease(p) : side === 1 ? 1 : side === 2 ? 1 - ease(p) : 0;
+  return { side, p, b, n, local, u: c / CYCLE };
 }
-// The light keeps one speed: a 4 s lap on a small circle, a 6 s lap on one 1.5x wider.
-// Both circles touch at the top, where the light changes lap, so it never jumps.
+// The light travels the square at one steady speed: up the left side as you breathe in,
+// across the top as you hold, down the right as you breathe out, across the bottom as you hold.
+// A point on every line marks each second and pulses as the light reaches it.
 function drawBreath(t, alpha, bright) {
-  const br = breath(t), r = Math.min(W, H) * .13, R = r * 1.5;
-  const ax = W / 2, ay = H / 2 - R * .92;
-  const k = ease(clamp(br.local / .9, 0, 1));
-  const rad = br.inhale ? R + (r - R) * k : r + (R - r) * k;
+  const br = breath(t), s = Math.min(W, H) * .3, x0 = W / 2 - s / 2, y0 = H / 2 - s / 2;
+  const C = [[x0, y0 + s], [x0, y0], [x0 + s, y0], [x0 + s, y0 + s]]; // bottom-left, top-left, top-right, bottom-right
+  const at = (u) => { u = ((u % 1) + 1) % 1; const k = Math.floor(u * 4), f = u * 4 - k, a = C[k], b2 = C[(k + 1) % 4]; return [a[0] + (b2[0] - a[0]) * f, a[1] + (b2[1] - a[1]) * f]; };
   cx.save(); cx.globalAlpha = alpha;
-  cx.strokeStyle = 'rgba(214,218,238,.32)'; cx.lineWidth = Math.max(1, DPR * 1.1);
-  cx.beginPath(); cx.arc(ax, ay + rad, rad, 0, 6.283); cx.stroke();
-  const pos = (p) => { const a = p * 6.283; return [ax + rad * Math.sin(a), ay + rad * (1 - Math.cos(a))]; };
-  for (let s = 14; s >= 1; s--) {
-    const pp = br.p - s * .011; if (pp < 0) continue;
-    const [x, y] = pos(pp); cx.fillStyle = `rgba(255,236,200,${.16 * (1 - s / 15)})`;
-    cx.beginPath(); cx.arc(x, y, DPR * 2.2 * (1 - s / 18), 0, 6.283); cx.fill();
+  cx.fillStyle = `rgba(244,217,166,${.035 * br.b})`; cx.fillRect(x0, y0, s, s);
+  cx.strokeStyle = 'rgba(214,218,238,.3)'; cx.lineWidth = Math.max(1, DPR * 1.1); cx.lineJoin = 'round';
+  cx.strokeRect(x0, y0, s, s);
+  for (let k = 0; k < 4; k++) {
+    for (let q = 0; q < 4; q++) {
+      const [x, y] = at((k * 4 + q) / 16);
+      let since = (br.side === k) ? br.local - q : -1;
+      if (q === 0 && br.side === k && br.local < 1) since = br.local;
+      const lit = br.side === k && br.local >= q;
+      const pulse = since >= 0 && since < 1 ? 1 - since : 0;
+      const r = DPR * (q === 0 ? 2.6 : 2.2) * (1 + 1.6 * pulse * pulse);
+      if (pulse > 0) { const g = cx.createRadialGradient(x, y, 0, x, y, r * 4); g.addColorStop(0, `rgba(244,217,166,${.35 * pulse})`); g.addColorStop(1, 'rgba(244,217,166,0)'); cx.fillStyle = g; cx.beginPath(); cx.arc(x, y, r * 4, 0, 6.283); cx.fill(); }
+      cx.fillStyle = lit ? `rgba(251,235,203,${.55 + .45 * pulse})` : 'rgba(214,218,238,.28)';
+      cx.beginPath(); cx.arc(x, y, r, 0, 6.283); cx.fill();
+    }
   }
-  const [x, y] = pos(br.p);
+  for (let i = 16; i >= 1; i--) {
+    const [x, y] = at(br.u - i * .0035);
+    cx.fillStyle = `rgba(255,236,200,${.16 * (1 - i / 17)})`;
+    cx.beginPath(); cx.arc(x, y, DPR * 2.2 * (1 - i / 20), 0, 6.283); cx.fill();
+  }
+  const [x, y] = at(br.u);
   drawStar(cx, x, y, DPR * 3.2, bright, t);
   cx.restore();
   return br;
@@ -708,7 +723,7 @@ function frame() {
       if (S.mode === 'session') bright = .85 + .45 * clamp((t - S.sessionStart) / S.sessionLen, 0, 1);
       drawBreath(t, 1, bright);
       if (S.mode === 'guide') {
-        const txt = br.inhale ? 'Breathe in with the light' : 'Breathe out as the circle widens';
+        const txt = PHASES[br.side];
         const gt = $('#guideText'); if (gt.dataset.txt !== txt) { gt.dataset.txt = txt; gt.style.opacity = 0; setTimeout(() => { gt.textContent = txt; gt.style.opacity = 1; }, 350); }
         $('#guideStep').textContent = (br.n + 1) + ' of 2';
         if (t - breathT0 >= CYCLE * 2) { setMode('eyes'); show('#s-eyes'); }
