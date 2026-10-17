@@ -95,9 +95,9 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--light);outline-offs
 
 /* session */
 #tapzone{position:fixed;inset:0;width:100%;height:100%}
-#hud{position:fixed;left:0;right:0;bottom:calc(28px + env(safe-area-inset-bottom,0px));display:flex;justify-content:center;align-items:center;gap:20px;opacity:0;transition:opacity .6s;pointer-events:none}
-#hud.on{opacity:1;pointer-events:auto}
-#left{font-variant-numeric:tabular-nums;font-size:20px;color:var(--soft);min-width:52px}
+#hud{position:fixed;left:0;right:0;bottom:calc(28px + env(safe-area-inset-bottom,0px));display:flex;justify-content:center;align-items:center;gap:20px;opacity:.32;transition:opacity 1.2s ease}
+#hud.on{opacity:1;transition:opacity .4s ease}
+#left{font-variant-numeric:tabular-nums;font-size:20px;color:var(--soft);min-width:64px}
 .pill{border:1px solid var(--line);border-radius:999px;padding:12px 24px;font-size:18px;background:rgba(18,21,42,.45);backdrop-filter:blur(6px)}
 
 /* end */
@@ -189,7 +189,7 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--light);outline-offs
 <section id="s-session" class="screen" hidden>
   <button id="tapzone" aria-label="Show time and controls"></button>
   <div id="hud">
-    <div id="left">5:00</div>
+    <div id="left">5 min</div>
     <button class="pill" id="pause">Pause</button>
     <button class="pill" id="endNow">End</button>
   </div>
@@ -666,6 +666,8 @@ $$('.time').forEach((b) => b.addEventListener('click', () => startSession(+b.dat
 let hudTimer = null;
 function flashHud() { $('#hud').classList.add('on'); clearTimeout(hudTimer); hudTimer = setTimeout(() => $('#hud').classList.remove('on'), 4000); }
 $('#tapzone').addEventListener('click', flashHud);
+let lastMove = 0;
+addEventListener('pointermove', (e) => { if (S.mode !== 'session' || e.pointerType === 'touch') return; const n = performance.now(); if (n - lastMove > 500) { lastMove = n; flashHud(); } });
 $('#pause').addEventListener('click', () => {
   if (pausedAt === null) { pausedAt = real(); $('#pause').textContent = 'Resume'; if (AC) AC.suspend(); if (bed) bed.a.pause(); clearTimeout(hudTimer); $('#hud').classList.add('on'); }
   else { pausedTotal += real() - pausedAt; pausedAt = null; $('#pause').textContent = 'Pause'; if (AC) AC.resume(); if (bed) { const p = bed.a.play(); if (p && p.catch) p.catch(() => {}); } flashHud(); }
@@ -823,7 +825,7 @@ function frame() {
         if (e >= 6) { S.sessionStart = clock(); setMode('session'); show('#s-session'); }
       } else {
         const left = Math.max(0, S.sessionLen - (t - S.sessionStart));
-        $('#left').textContent = Math.floor(left / 60) + ':' + String(Math.floor(left % 60)).padStart(2, '0');
+        const sc = Math.ceil(left); $('#left').textContent = left > 60 ? Math.ceil(left / 60) + ' min' : Math.floor(sc / 60) + ':' + String(sc % 60).padStart(2, '0');
         if (left <= 0) finish(false);
       }
       break;

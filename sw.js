@@ -1,6 +1,6 @@
 // Keeps Thetascape working offline: the app shell is cached on install,
 // and sounds are cached the first time they play.
-const CACHE = 'thetascape-v7';
+const CACHE = 'thetascape-v8';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png', 'icons/favicon-32.png'];
 
 self.addEventListener('install', (e) => {
