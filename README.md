@@ -2,7 +2,7 @@
 
 Pick a world. Follow the light. Feel calmer in a few minutes.
 
-Thetascape is a small web app for slower breathing. You choose one of four worlds (Grid, Contour, Tide or Bloom), choose 1, 5 or 10 minutes, and follow Epsilon, a point of light that traces a square for box breathing: six seconds in, six holding, six out, six holding. After two guided breaths you close your eyes, and a bowl rings when you're done.
+Thetascape is a small web app for slower breathing. You choose one of four worlds (Grid, Contour, Tide or Bloom), choose 1, 5 or 10 minutes, and follow Epsilon, a point of light that traces a square for box breathing: a slow four count in, four holding, four out and four holding (about six seconds a side). After two guided breaths you close your eyes, and a bowl rings when you're done.
 
 ## What's here
 

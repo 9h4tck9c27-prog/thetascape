@@ -284,7 +284,7 @@ const WORLDS = {
   bloom:   { name: 'Bloom',   feel: 'Open and warm',     audio: 'audio/bloom.mp3' }
 };
 const ORDER = ['grid', 'contour', 'tide', 'bloom'];
-const SIDE = 6, CYCLE = SIDE * 4; // seconds per side of the square
+const SIDE = 6, COUNTS = 4, CYCLE = SIDE * 4; // a slow four count: 4 counts per side, 6 seconds per side
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => Array.from(document.querySelectorAll(s));
@@ -504,7 +504,7 @@ function breath(t) {
 }
 // The light travels the square at one steady speed: up the left side as you breathe in,
 // across the top as you hold, down the right as you breathe out, across the bottom as you hold.
-// A point on every line marks each second and pulses as the light reaches it.
+// Four points on every line mark the count and pulse as the light reaches them.
 function drawBreath(t, alpha, bright) {
   const br = breath(t), s = Math.min(W * .74, H * .5), x0 = W / 2 - s / 2, y0 = H / 2 - s / 2;
   const C = [[x0, y0 + s], [x0, y0], [x0 + s, y0], [x0 + s, y0 + s]]; // bottom-left, top-left, top-right, bottom-right
@@ -516,10 +516,10 @@ function drawBreath(t, alpha, bright) {
   cx.strokeStyle = 'rgba(255,255,255,.82)'; cx.lineWidth = Math.max(2, DPR * 2); cx.lineJoin = 'round';
   cx.strokeRect(x0, y0, s, s);
   for (let k = 0; k < 4; k++) {
-    for (let q = 0; q < SIDE; q++) {
-      const [x, y] = at((k * SIDE + q) / (4 * SIDE));
-      let since = (br.side === k) ? br.local - q : -1;
-      if (q === 0 && br.side === k && br.local < 1) since = br.local;
+    const cnt = br.local / (SIDE / COUNTS);
+    for (let q = 0; q < COUNTS; q++) {
+      const [x, y] = at((k * COUNTS + q) / (4 * COUNTS));
+      const since = br.side === k ? cnt - q : -1;
       const pulse = since >= 0 && since < 1 ? 1 - since : 0;
       const r = DPR * (q === 0 ? 4 : 3.4) * (1 + 1.6 * pulse * pulse);
       if (pulse <= 0) continue;
