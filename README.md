@@ -11,7 +11,8 @@ Thetascape is a small web app for slower breathing. You choose one of four world
 | `index.html` | The whole app: screens, the four animated worlds, the breath guide, sound and progress tracking |
 | `manifest.webmanifest` | Lets people add Thetascape to their home screen as an app |
 | `sw.js` | Keeps the app working offline once it has been opened |
-| `icons/` | Home-screen and browser icons |
+| `icons/` | Home-screen and browser icons, plus a 1024 px master |
+| `og-image.png` | The 1200 × 630 preview shown when the link is shared |
 
 There's no build step and no framework. The app is one HTML file.
 
@@ -50,6 +51,7 @@ Because the sounds are excluded from this public repository, a site published th
 
 - Fill in the placeholders in the Privacy and Terms sheets in `index.html`: `[CONTACT EMAIL]`, `[OWNER NAME]` and `[DATE]`.
 - Set `SHARE_URL` near the top of the script to the app's public address.
+- The sharing tags in `index.html` point to `https://9h4tck9c27-prog.github.io/thetascape/`. If the app moves to its own domain, update the `og:url`, `og:image` and `twitter:image` addresses.
 - When you change the app, bump `CACHE` in `sw.js` (for example to `thetascape-v2`) so returning visitors get the new version.
 
 ## Privacy
