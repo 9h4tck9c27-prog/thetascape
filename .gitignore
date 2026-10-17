@@ -1,0 +1,6 @@
+# Sounds are licensed separately and are not part of this repository.
+audio/
+*.wav
+*.mp3
+*.m4a
+.DS_Store

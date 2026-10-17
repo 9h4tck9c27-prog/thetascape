@@ -1,0 +1,734 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Pick a world. Follow the light. Feel calmer in a few minutes.">
+<meta name="theme-color" content="#12152A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Thetascape">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<style>[hidden]{display:none!important}</style>
+<title>Thetascape</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400&family=Figtree:wght@400;500;600&display=swap">
+<style>
+/* Layout: one full-screen canvas paints every world; quiet UI floats over it, one screen at a time. */
+:root{
+  --night:#12152A; --deep:#1A1E30; --panel:rgba(26,30,48,.86);
+  --mist:#ECEBF2; --soft:#C9CCDD; --dim:#9297B4; --line:rgba(201,204,221,.28);
+  --light:#F4D9A6; --ink:#1A1E30;
+  --display:'Jost','Avenir Next','Helvetica Neue',sans-serif;
+  --ui:'Figtree','Helvetica Neue',Arial,sans-serif;
+  color-scheme:dark;
+}
+html,body{height:100%;margin:0;overflow:hidden;background:var(--night);color:var(--mist);font-family:var(--ui);-webkit-tap-highlight-color:transparent}
+#scene{position:fixed;inset:0;width:100%;height:100%;display:block}
+.screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:calc(24px + env(safe-area-inset-top,0px)) calc(24px + env(safe-area-inset-bottom,0px));
+  box-sizing:border-box;opacity:0;transition:opacity .9s ease;text-align:center}
+.screen.in{opacity:1}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+button:focus-visible,a:focus-visible{outline:2px solid var(--light);outline-offset:4px;border-radius:12px}
+.quiet{font-size:14px;color:var(--dim);letter-spacing:.04em}
+.mark{font-family:var(--display);font-weight:300;letter-spacing:.32em;padding-left:.32em}
+.line{font-size:clamp(18px,2.4vw,24px);line-height:1.45;color:var(--mist);max-width:28ch;text-wrap:balance}
+.sub{font-size:16px;line-height:1.55;color:var(--soft);max-width:34ch;text-wrap:balance}
+
+/* start */
+#begin{width:200px;height:200px;border-radius:50%}
+#s-start .quiet{position:absolute;bottom:calc(64px + env(safe-area-inset-bottom,0px))}
+
+/* home */
+#s-home{justify-content:space-between}
+.home-top{display:flex;flex-direction:column;align-items:center;gap:14px;padding-top:8px}
+.home-top .mark{font-size:clamp(20px,3vw,30px)}
+.worlds{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;width:min(100%,460px)}
+@media (min-width:900px){.worlds{grid-template-columns:repeat(4,minmax(0,1fr));width:min(100%,1080px);gap:20px}}
+.world{position:relative;aspect-ratio:3/4;border-radius:22px;overflow:hidden;border:1px solid var(--line);transition:transform .6s ease,border-color .6s ease}
+.world canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.world span{position:absolute;left:14px;bottom:12px;font-size:16px;font-weight:500;text-shadow:0 1px 8px rgba(0,0,0,.5)}
+.world:hover{transform:translateY(-3px);border-color:rgba(244,217,166,.6)}
+.home-foot{display:flex;flex-direction:column;align-items:center;gap:12px;padding-bottom:4px}
+.row{display:flex;gap:22px;flex-wrap:wrap;justify-content:center}
+.text-btn{font-size:15px;color:var(--soft);padding:8px 2px}
+.text-btn:hover{color:var(--mist)}
+.tiny{font-size:13px;color:var(--dim);padding:6px 2px}
+#fs{position:fixed;top:calc(14px + env(safe-area-inset-top,0px));right:max(16px,env(safe-area-inset-right,0px));width:40px;height:40px;border-radius:50%;opacity:.55}
+#fs:hover{opacity:1}
+
+/* time */
+.world-name{font-family:var(--display);font-weight:300;font-size:clamp(34px,5vw,52px);letter-spacing:.04em}
+.times{display:flex;gap:18px;flex-wrap:wrap;justify-content:center}
+.time{width:96px;height:96px;border-radius:50%;border:1px solid var(--line);font-size:18px;background:rgba(18,21,42,.35);backdrop-filter:blur(6px);transition:border-color .4s,background .4s}
+.time:hover,.time.last{border-color:var(--light);background:rgba(244,217,166,.12)}
+.back{position:fixed;top:calc(14px + env(safe-area-inset-top,0px));left:max(16px,env(safe-area-inset-left,0px));font-size:15px;color:var(--soft);padding:10px 4px}
+
+/* countdown & guide */
+#count{font-family:var(--display);font-weight:300;font-size:clamp(96px,16vw,160px);line-height:1;color:#FBEBCB;transition:opacity .4s}
+#s-guide{justify-content:flex-end;padding-bottom:calc(14vh + env(safe-area-inset-bottom,0px))}
+#guideText{transition:opacity .6s}
+#s-eyes{justify-content:flex-end;padding-bottom:calc(14vh + env(safe-area-inset-bottom,0px))}
+
+/* session */
+#tapzone{position:fixed;inset:0;width:100%;height:100%}
+#hud{position:fixed;left:0;right:0;bottom:calc(28px + env(safe-area-inset-bottom,0px));display:flex;justify-content:center;align-items:center;gap:20px;opacity:0;transition:opacity .6s;pointer-events:none}
+#hud.on{opacity:1;pointer-events:auto}
+#left{font-variant-numeric:tabular-nums;font-size:16px;color:var(--soft);min-width:52px}
+.pill{border:1px solid var(--line);border-radius:999px;padding:10px 20px;font-size:15px;background:rgba(18,21,42,.45);backdrop-filter:blur(6px)}
+
+/* end */
+#s-end .q{font-family:var(--display);font-weight:300;font-size:clamp(28px,4vw,40px)}
+.chips{display:flex;flex-direction:column;gap:10px;width:min(100%,280px)}
+.chip{border:1px solid var(--line);border-radius:999px;padding:13px;font-size:16px;background:rgba(18,21,42,.4);backdrop-filter:blur(6px);transition:border-color .4s,background .4s}
+.chip:hover{border-color:var(--light);background:rgba(244,217,166,.12)}
+.cta{border-radius:999px;padding:13px 30px;font-size:16px;font-weight:600;background:var(--light);color:var(--ink)}
+#companion{display:flex;flex-direction:column;align-items:center;gap:6px}
+
+/* sheets */
+.sheet{position:fixed;inset:0;background:rgba(10,12,24,.6);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:24px;box-sizing:border-box;z-index:20}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:26px;padding:28px;width:min(100%,440px);max-height:min(82vh,720px);overflow:auto;box-sizing:border-box;display:flex;flex-direction:column;gap:16px;text-align:left}
+.card h2{font-family:var(--display);font-weight:300;font-size:28px;margin:0}
+.card p,.card li{font-size:15px;line-height:1.6;color:var(--soft);margin:0}
+.card ol,.card ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px}
+.card .close{align-self:flex-end;font-size:15px;color:var(--mist);border:1px solid var(--line);border-radius:999px;padding:9px 20px}
+.dots{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:10px;justify-items:center}
+.dot{width:18px;height:18px;border-radius:50%;border:1px solid rgba(201,204,221,.22);box-sizing:border-box}
+.dot.on{background:var(--light);border-color:var(--light);box-shadow:0 0 10px rgba(244,217,166,.55)}
+.dot.today{outline:1px solid var(--soft);outline-offset:3px}
+.stat{display:flex;justify-content:space-between;font-size:15px;color:var(--soft);font-variant-numeric:tabular-nums}
+.stat b{color:var(--mist);font-weight:500}
+#toast{position:fixed;left:50%;bottom:calc(32px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:10px 18px;font-size:14px;opacity:0;transition:opacity .4s;pointer-events:none;z-index:30}
+#toast.on{opacity:1}
+@media (prefers-reduced-motion:reduce){.screen,.world,#hud,#toast{transition:none}}
+</style>
+</head>
+<body>
+<canvas id="scene" aria-hidden="true"></canvas>
+
+<section id="s-start" class="screen" hidden>
+  <button id="begin" aria-label="Begin"></button>
+  <div class="quiet">tap the star · sound on</div>
+</section>
+
+<section id="s-home" class="screen" hidden>
+  <button id="fs" aria-label="Full screen"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C9CCDD" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+  <div class="home-top">
+    <div class="mark">THETASCAPE</div>
+    <div class="sub">Pick a world. Follow the light.<br>Feel calmer in a few minutes.</div>
+  </div>
+  <div class="worlds">
+    <button class="world" data-world="grid"><canvas></canvas><span>Grid</span></button>
+    <button class="world" data-world="contour"><canvas></canvas><span>Contour</span></button>
+    <button class="world" data-world="tide"><canvas></canvas><span>Tide</span></button>
+    <button class="world" data-world="bloom"><canvas></canvas><span>Bloom</span></button>
+  </div>
+  <div class="home-foot">
+    <div class="row">
+      <button class="text-btn" data-open="progress">Your practice</button>
+      <button class="text-btn" data-share>Share</button>
+      <button class="text-btn" data-open="add">Add to home screen</button>
+    </div>
+    <div class="row">
+      <button class="tiny" data-open="privacy">Privacy</button>
+      <button class="tiny" data-open="terms">Terms</button>
+    </div>
+  </div>
+</section>
+
+<section id="s-time" class="screen" hidden>
+  <button class="back" id="back">← Worlds</button>
+  <div class="world-name" id="worldName">Tide</div>
+  <div class="sub" id="worldFeel">Soft and slow</div>
+  <div class="times">
+    <button class="time" data-min="1">1 min</button>
+    <button class="time" data-min="5">5 min</button>
+    <button class="time" data-min="10">10 min</button>
+  </div>
+</section>
+
+<section id="s-count" class="screen" hidden>
+  <div id="count">3</div>
+  <div class="quiet">settle in</div>
+</section>
+
+<section id="s-guide" class="screen" hidden>
+  <div class="line" id="guideText">Breathe in with the light</div>
+  <div class="quiet" id="guideStep">1 of 2</div>
+</section>
+
+<section id="s-eyes" class="screen" hidden>
+  <div class="line">Now close your eyes.</div>
+  <div class="sub">Keep this gentle pace. A bowl will ring when you’re done.</div>
+</section>
+
+<section id="s-session" class="screen" hidden>
+  <button id="tapzone" aria-label="Show time and controls"></button>
+  <div id="hud">
+    <div id="left">5:00</div>
+    <button class="pill" id="pause">Pause</button>
+    <button class="pill" id="endNow">End</button>
+  </div>
+</section>
+
+<section id="s-end" class="screen" hidden>
+  <div id="feelBlock" style="display:flex;flex-direction:column;align-items:center;gap:22px">
+    <div class="q">How do you feel?</div>
+    <div class="chips">
+      <button class="chip" data-feel="0">About the same</button>
+      <button class="chip" data-feel="1">Calmer</button>
+      <button class="chip" data-feel="2">Much calmer</button>
+    </div>
+  </div>
+  <div id="doneBlock" hidden style="display:flex;flex-direction:column;align-items:center;gap:22px">
+    <div class="q" id="doneTitle">Welcome back</div>
+    <div class="sub" id="doneText"></div>
+    <div id="companion" hidden>
+      <svg width="96" height="90" viewBox="40 40 240 230" aria-hidden="true"><path d="M48 256 C30 150 92 62 160 62 C228 62 290 150 272 256 C252 274 68 274 48 256 Z" fill="#E4D3B8"/><ellipse cx="160" cy="214" rx="64" ry="40" fill="#F3EADB"/><path d="M160 64 C152 50 168 44 162 32" fill="none" stroke="#7E9A7B" stroke-width="7" stroke-linecap="round"/><path d="M118 152 q12 10 24 0 M178 152 q12 10 24 0 M152 178 q8 6 16 0" fill="none" stroke="#2E3A3A" stroke-width="5" stroke-linecap="round"/><ellipse cx="110" cy="174" rx="15" ry="8" fill="#C98B6B" opacity=".45"/><ellipse cx="210" cy="174" rx="15" ry="8" fill="#C98B6B" opacity=".45"/><path d="M126 222 h68 c0 24 -15 36 -34 36 c-19 0 -34 -12 -34 -36 z" fill="#7C8FB0"/></svg>
+      <div class="quiet" id="companionText">Hum came by to say well done.</div>
+    </div>
+    <div class="row"><button class="cta" id="again">Again</button><button class="pill" id="home">Home</button></div>
+    <div class="row"><button class="text-btn" data-share>Share</button><button class="text-btn" data-open="add">Add to home screen</button></div>
+  </div>
+</section>
+
+<div class="sheet" id="sh-progress" role="dialog" aria-modal="true" aria-labelledby="pTitle" hidden>
+  <div class="card">
+    <h2 id="pTitle">Your practice</h2>
+    <div class="quiet" style="text-align:left">The last four weeks</div>
+    <div class="dots" id="dots"></div>
+    <div class="stat"><span>Sessions</span><b id="stSessions">0</b></div>
+    <div class="stat"><span>Minutes of slow breathing</span><b id="stMinutes">0</b></div>
+    <div class="stat"><span>Felt calmer after</span><b id="stCalmer">–</b></div>
+    <div class="stat"><span>Days in a row</span><b id="stStreak">0</b></div>
+    <p id="pNote">Try a short session each day for a week and notice how you feel.</p>
+    <p class="tiny" style="padding:0">Saved only in this browser. No account, nothing sent anywhere.</p>
+    <button class="close">Close</button>
+  </div>
+</div>
+
+<div class="sheet" id="sh-add" role="dialog" aria-modal="true" aria-labelledby="aTitle" hidden>
+  <div class="card">
+    <h2 id="aTitle">Keep it close</h2>
+    <p>Add Thetascape to your home screen and it opens full screen, like an app.</p>
+    <p><b style="color:var(--mist)">iPhone and iPad</b></p>
+    <ol><li>Open this page in Safari.</li><li>Tap the Share button.</li><li>Choose “Add to Home Screen”.</li></ol>
+    <p><b style="color:var(--mist)">Android</b></p>
+    <ol><li>Open this page in Chrome.</li><li>Tap the ⋮ menu.</li><li>Choose “Add to Home screen” or “Install app”.</li></ol>
+    <p><b style="color:var(--mist)">Computer</b></p>
+    <p>In Chrome or Edge, use the install icon at the right of the address bar.</p>
+    <button class="close">Close</button>
+  </div>
+</div>
+
+<div class="sheet" id="sh-privacy" role="dialog" aria-modal="true" aria-labelledby="prTitle" hidden>
+  <div class="card">
+    <h2 id="prTitle">Privacy</h2>
+    <p>Thetascape keeps things simple: there are no accounts, no ads and no tracking.</p>
+    <p>Your sessions, minutes and “how do you feel” answers are saved only in this browser on this device, so you can see your practice. They are never sent to us or anyone else. Clearing your browser data removes them.</p>
+    <p>The sounds and fonts load from the servers that host this app and from Google Fonts, which can see a standard web request, as any website does.</p>
+    <p>Questions: [CONTACT EMAIL]</p>
+    <p class="tiny" style="padding:0">Last updated [DATE]</p>
+    <button class="close">Close</button>
+  </div>
+</div>
+
+<div class="sheet" id="sh-terms" role="dialog" aria-modal="true" aria-labelledby="tTitle" hidden>
+  <div class="card">
+    <h2 id="tTitle">Terms</h2>
+    <p>Thetascape is a guide for relaxed breathing and quiet time. It is not medical advice and doesn’t treat any condition. If you have a health concern, talk with a doctor.</p>
+    <p>Breathe gently and comfortably. If you feel dizzy or uncomfortable, stop and breathe normally. Never use Thetascape while driving or doing anything that needs your full attention.</p>
+    <p>The music, visuals and name belong to [OWNER NAME]. You’re welcome to use the app for your own practice and to share the link; please don’t copy or resell its content.</p>
+    <p>The app is offered as is. We may change or update it at any time.</p>
+    <p class="tiny" style="padding:0">Last updated [DATE]</p>
+    <button class="close">Close</button>
+  </div>
+</div>
+
+<div id="toast" role="status"></div>
+
+<script>
+(() => {
+'use strict';
+const SHARE_URL = ''; // set to the public address once hosted; empty uses this page's address
+const WORLDS = {
+  grid:    { name: 'Grid',    feel: 'Clear and focused', audio: 'audio/grid.mp3' },
+  contour: { name: 'Contour', feel: 'Grounded and still', audio: 'audio/contour.mp3' },
+  tide:    { name: 'Tide',    feel: 'Soft and slow',     audio: 'audio/tide.mp3' },
+  bloom:   { name: 'Bloom',   feel: 'Open and warm',     audio: 'audio/bloom.mp3' }
+};
+const ORDER = ['grid', 'contour', 'tide', 'bloom'];
+const IN = 4, OUT = 6, CYCLE = IN + OUT;
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const $ = (s) => document.querySelector(s);
+const $$ = (s) => Array.from(document.querySelectorAll(s));
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const ease = (x) => x < .5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2;
+
+/* ---------- storage (this browser only) ---------- */
+const KEY = 'thetascape.v1';
+function load() { try { return JSON.parse(localStorage.getItem(KEY)) || { sessions: [] }; } catch (e) { return { sessions: [] }; } }
+function save(d) { try { localStorage.setItem(KEY, JSON.stringify(d)); } catch (e) {} }
+function dayKey(d) { const z = (n) => String(n).padStart(2, '0'); return d.getFullYear() + '-' + z(d.getMonth() + 1) + '-' + z(d.getDate()); }
+
+/* ---------- clock that pauses ---------- */
+let pausedTotal = 0, pausedAt = null;
+const real = () => performance.now() / 1000;
+const clock = () => (pausedAt !== null ? pausedAt : real()) - pausedTotal;
+
+/* ---------- canvas ---------- */
+const cv = $('#scene'), cx = cv.getContext('2d');
+let W = 0, H = 0, DPR = 1;
+function resize() {
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  W = Math.round(innerWidth * DPR); H = Math.round(innerHeight * DPR);
+  cv.width = W; cv.height = H;
+  $$('.world canvas').forEach((c) => { c.width = Math.round(c.clientWidth * DPR); c.height = Math.round(c.clientHeight * DPR); });
+}
+addEventListener('resize', resize);
+
+/* stars for the night sky */
+const sky = Array.from({ length: 160 }, () => ({ x: Math.random(), y: Math.random(), r: Math.random() * 1.1 + .3, p: Math.random() * 6.28, s: .4 + Math.random() * 1.2 }));
+function drawSky(g, w, h, t, a) {
+  const grd = g.createRadialGradient(w / 2, h * .55, 0, w / 2, h * .55, Math.max(w, h) * .8);
+  grd.addColorStop(0, '#1C2140'); grd.addColorStop(1, '#0E1122');
+  g.fillStyle = grd; g.fillRect(0, 0, w, h);
+  for (const s of sky) {
+    const tw = .45 + .55 * (0.5 + 0.5 * Math.sin(t * s.s + s.p));
+    g.globalAlpha = a * tw * .8; g.fillStyle = '#E8E4F4';
+    g.beginPath(); g.arc(s.x * w, s.y * h, s.r * DPR, 0, 6.283); g.fill();
+  }
+  g.globalAlpha = 1;
+}
+
+/* Epsilon: a small, twinkling star */
+function drawStar(g, x, y, size, bright, t) {
+  const tw = 1 + .07 * Math.sin(t * 2.3) + .05 * Math.sin(t * 5.7 + 1.3);
+  const s = size * tw;
+  let grd = g.createRadialGradient(x, y, 0, x, y, s * 9);
+  grd.addColorStop(0, `rgba(255,236,200,${.32 * bright})`); grd.addColorStop(.35, `rgba(244,217,166,${.12 * bright})`); grd.addColorStop(1, 'rgba(244,217,166,0)');
+  g.fillStyle = grd; g.beginPath(); g.arc(x, y, s * 9, 0, 6.283); g.fill();
+  g.save(); g.translate(x, y); g.rotate(.06 * Math.sin(t * .4));
+  for (const [dx, dy, len] of [[1, 0, 7.5], [0, 1, 7.5], [.7, .7, 3.2], [.7, -.7, 3.2]]) {
+    const L = s * len * (dx && dy ? 1 : (1 + .1 * Math.sin(t * 1.7)));
+    const lg = g.createLinearGradient(-dx * L, -dy * L, dx * L, dy * L);
+    lg.addColorStop(0, 'rgba(255,246,226,0)'); lg.addColorStop(.5, `rgba(255,246,226,${.55 * bright})`); lg.addColorStop(1, 'rgba(255,246,226,0)');
+    g.strokeStyle = lg; g.lineWidth = Math.max(.6, s * .18);
+    g.beginPath(); g.moveTo(-dx * L, -dy * L); g.lineTo(dx * L, dy * L); g.stroke();
+  }
+  g.restore();
+  grd = g.createRadialGradient(x, y, 0, x, y, s * 1.6);
+  grd.addColorStop(0, `rgba(255,250,238,${Math.min(1, bright)})`); grd.addColorStop(.6, `rgba(255,240,210,${.7 * bright})`); grd.addColorStop(1, 'rgba(255,240,210,0)');
+  g.fillStyle = grd; g.beginPath(); g.arc(x, y, s * 1.6, 0, 6.283); g.fill();
+}
+
+/* ---------- the four worlds ---------- */
+function bgV(g, w, h, a, b) { const grd = g.createLinearGradient(0, 0, 0, h); grd.addColorStop(0, a); grd.addColorStop(1, b); g.fillStyle = grd; g.fillRect(0, 0, w, h); }
+const DRAW = {
+  grid(g, w, h, t, b) {
+    bgV(g, w, h, '#0F1328', '#1C2244');
+    const hz = h * .4, f = h * .95, camH = 1.25, span = Math.max(14, 14 * (w / h));
+    const dz = .55, scroll = (t * .35) % dz;
+    g.lineWidth = Math.max(1, DPR);
+    for (let i = 0; i < 26; i++) {
+      const z = 1 + i * dz - scroll;
+      const a = clamp(1 - z / 15, 0, 1) * .75;
+      g.strokeStyle = `rgba(122,136,191,${a})`; g.beginPath();
+      for (let x = -span; x <= span; x += .5) {
+        const y = Math.sin(x * .45 + z * .35 + t * .12) * Math.cos(z * .25 - t * .08) * .55 * (1 + .55 * b);
+        const sx = w / 2 + x / z * f * .6, sy = hz + (camH - y) / z * f * .55;
+        x === -span ? g.moveTo(sx, sy) : g.lineTo(sx, sy);
+      }
+      g.stroke();
+    }
+    for (let x = -span; x <= span; x += 1.5) {
+      g.beginPath();
+      for (let i = 0; i < 26; i++) {
+        const z = 1 + i * dz - scroll;
+        const y = Math.sin(x * .45 + z * .35 + t * .12) * Math.cos(z * .25 - t * .08) * .55 * (1 + .55 * b);
+        const sx = w / 2 + x / z * f * .6, sy = hz + (camH - y) / z * f * .55;
+        i === 0 ? g.moveTo(sx, sy) : g.lineTo(sx, sy);
+      }
+      g.strokeStyle = 'rgba(122,136,191,.18)'; g.stroke();
+    }
+    const glow = g.createLinearGradient(0, hz - h * .08, 0, hz + h * .1);
+    glow.addColorStop(0, 'rgba(15,19,40,0)'); glow.addColorStop(.5, 'rgba(120,130,190,.08)'); glow.addColorStop(1, 'rgba(15,19,40,0)');
+    g.fillStyle = glow; g.fillRect(0, hz - h * .08, w, h * .18);
+  },
+  contour(g, w, h, t, b) {
+    bgV(g, w, h, '#0E1A1F', '#1C2A31');
+    const c = { x: w / 2, y: h / 2 }, m = Math.min(w, h), N = 20;
+    g.lineWidth = Math.max(1, DPR * 1.1);
+    for (let k = 1; k <= N; k++) {
+      const r = k * m * .034 * (1 + .07 * b);
+      g.strokeStyle = `rgba(134,176,164,${.75 * (1 - k / (N + 4))})`; g.beginPath();
+      for (let s = 0; s <= 96; s++) {
+        const a = s / 96 * 6.283;
+        const rr = r * (1 + .09 * Math.sin(3 * a + k * .5 + t * .12) + .05 * Math.sin(5 * a - k * .3 - t * .09));
+        const x = c.x + rr * Math.cos(a) * 1.3, y = c.y + rr * Math.sin(a) * .85;
+        s ? g.lineTo(x, y) : g.moveTo(x, y);
+      }
+      g.closePath(); g.stroke();
+    }
+  },
+  tide(g, w, h, t, b) {
+    bgV(g, w, h, '#161B2E', '#2A2F45');
+    const cols = ['#2E3552', '#3B4462', '#4A5576', '#5E6B8E', '#7C7F96', '#A69477', '#C9A97A'];
+    cols.forEach((col, j) => {
+      const base = h * (.46 + j * .078) - b * h * .012 * (j + 1) * .5;
+      const A1 = h * (.012 + j * .004), A2 = h * (.006 + j * .002);
+      g.fillStyle = col; g.beginPath(); g.moveTo(0, h);
+      for (let x = 0; x <= w + 20; x += 16 * DPR) {
+        const u = x / w;
+        g.lineTo(x, base + A1 * Math.sin(u * 6.5 + t * .12 * (1 + j * .2) + j * 1.3) + A2 * Math.sin(u * 15 - t * .09 + j * 2.1));
+      }
+      g.lineTo(w, h); g.closePath(); g.fill();
+    });
+  },
+  bloom(g, w, h, t, b) {
+    const m = Math.min(w, h), cxp = w / 2, cyp = h / 2;
+    const grd = g.createRadialGradient(cxp, cyp, 0, cxp, cyp, Math.max(w, h) * .7);
+    grd.addColorStop(0, '#3A2B40'); grd.addColorStop(1, '#140F1A'); g.fillStyle = grd; g.fillRect(0, 0, w, h);
+    const rings = [[12, .11, .34, '110,79,110', .5], [12, .09, .27, '168,111,140', .62], [10, .07, .2, '217,155,176', .7], [8, .05, .13, '232,195,160', .82]];
+    const open = .78 + .22 * b;
+    rings.forEach(([n, rx, ry, rgb, a], m2) => {
+      const RY = m * ry * open, RX = m * rx;
+      g.fillStyle = `rgba(${rgb},${a})`;
+      for (let q = 0; q < n; q++) {
+        const ang = q / n * 6.283 + m2 * .26 + t * .02 * (m2 % 2 ? -1 : 1);
+        g.save(); g.translate(cxp, cyp); g.rotate(ang);
+        g.beginPath(); g.ellipse(0, -RY * .92, RX, RY, 0, 0, 6.283); g.fill(); g.restore();
+      }
+    });
+  }
+};
+function drawWorld(g, key, w, h, t, b, scale, alpha) {
+  g.save(); g.globalAlpha = alpha;
+  if (scale !== 1) { g.translate(w / 2, h / 2); g.scale(scale, scale); g.translate(-w / 2, -h / 2); }
+  DRAW[key](g, w, h, t, b);
+  g.restore();
+}
+
+/* ---------- breath ---------- */
+let breathT0 = 0;
+function breath(t) {
+  const c = ((t - breathT0) % CYCLE + CYCLE) % CYCLE, n = Math.floor((t - breathT0) / CYCLE);
+  if (c < IN) return { inhale: true, p: c / IN, b: ease(c / IN), n, local: c };
+  return { inhale: false, p: (c - IN) / OUT, b: 1 - ease((c - IN) / OUT), n, local: c - IN };
+}
+// The light keeps one speed: a 4 s lap on a small circle, a 6 s lap on one 1.5x wider.
+// Both circles touch at the top, where the light changes lap, so it never jumps.
+function drawBreath(t, alpha, bright) {
+  const br = breath(t), r = Math.min(W, H) * .13, R = r * 1.5;
+  const ax = W / 2, ay = H / 2 - R * .92;
+  const k = ease(clamp(br.local / .9, 0, 1));
+  const rad = br.inhale ? R + (r - R) * k : r + (R - r) * k;
+  cx.save(); cx.globalAlpha = alpha;
+  cx.strokeStyle = 'rgba(214,218,238,.32)'; cx.lineWidth = Math.max(1, DPR * 1.1);
+  cx.beginPath(); cx.arc(ax, ay + rad, rad, 0, 6.283); cx.stroke();
+  const pos = (p) => { const a = p * 6.283; return [ax + rad * Math.sin(a), ay + rad * (1 - Math.cos(a))]; };
+  for (let s = 14; s >= 1; s--) {
+    const pp = br.p - s * .011; if (pp < 0) continue;
+    const [x, y] = pos(pp); cx.fillStyle = `rgba(255,236,200,${.16 * (1 - s / 15)})`;
+    cx.beginPath(); cx.arc(x, y, DPR * 2.2 * (1 - s / 18), 0, 6.283); cx.fill();
+  }
+  const [x, y] = pos(br.p);
+  drawStar(cx, x, y, DPR * 3.2, bright, t);
+  cx.restore();
+  return br;
+}
+
+/* ---------- audio ---------- */
+let AC = null, master = null;
+const buffers = {}, loading = {};
+function initAudio() {
+  if (AC) { if (AC.state === 'suspended') AC.resume(); return; }
+  const C = window.AudioContext || window.webkitAudioContext; if (!C) return;
+  AC = new C(); master = AC.createGain(); master.gain.value = .9; master.connect(AC.destination);
+  if (AC.state === 'suspended') AC.resume();
+}
+function getBuffer(url) {
+  if (buffers[url]) return Promise.resolve(buffers[url]);
+  if (loading[url]) return loading[url];
+  loading[url] = fetch(url).then((r) => r.arrayBuffer()).then((ab) => new Promise((res, rej) => AC.decodeAudioData(ab, res, rej)))
+    .then((buf) => (buffers[url] = buf)).catch(() => null);
+  return loading[url];
+}
+function makeBus() { const bus = AC.createGain(); bus.connect(master); return { bus, src: null, srcs: [], stopped: false, timer: null }; }
+function playOnce(url, gain, fadeIn) {
+  if (!AC) return null;
+  const h = makeBus(), bus = h.bus;
+  const t = AC.currentTime; bus.gain.setValueAtTime(fadeIn ? 0 : gain, t); if (fadeIn) bus.gain.linearRampToValueAtTime(gain, t + fadeIn);
+  getBuffer(url).then((buf) => { if (!buf || h.stopped) return; const s = AC.createBufferSource(); s.buffer = buf; s.connect(bus); s.start(); h.src = s; });
+  return h;
+}
+function fadeOut(h, secs) {
+  if (!h || !AC) return; h.stopped = true;
+  const t = AC.currentTime; h.bus.gain.cancelScheduledValues(t); h.bus.gain.setValueAtTime(h.bus.gain.value, t); h.bus.gain.linearRampToValueAtTime(0, t + secs);
+  setTimeout(() => { try { h.src && h.src.stop(); (h.srcs || []).forEach((s) => s.stop()); } catch (e) {} clearInterval(h.timer); h.bus.disconnect(); }, secs * 1000 + 200);
+}
+// Seamless loop: overlapping copies with long crossfades.
+function playLoop(url, gain, fadeIn) {
+  if (!AC) return null;
+  const h = makeBus();
+  const t0 = AC.currentTime; h.bus.gain.setValueAtTime(0, t0); h.bus.gain.linearRampToValueAtTime(gain, t0 + fadeIn);
+  getBuffer(url).then((buf) => {
+    if (!buf || h.stopped) return;
+    const X = Math.min(8, buf.duration / 4); let next = AC.currentTime + .05; let first = true;
+    const sched = () => {
+      while (!h.stopped && next < AC.currentTime + 3) {
+        const s = AC.createBufferSource(), g = AC.createGain(); s.buffer = buf; s.connect(g); g.connect(h.bus);
+        g.gain.setValueAtTime(first ? 1 : 0, next); if (!first) g.gain.linearRampToValueAtTime(1, next + X);
+        g.gain.setValueAtTime(1, next + buf.duration - X); g.gain.linearRampToValueAtTime(0, next + buf.duration);
+        s.start(next); s.stop(next + buf.duration + .05); h.srcs.push(s); if (h.srcs.length > 4) h.srcs.shift();
+        next += buf.duration - X; first = false;
+      }
+    };
+    sched(); h.timer = setInterval(sched, 700);
+  });
+  return h;
+}
+let opening = null, bed = null;
+
+/* ---------- screens ---------- */
+let current = null;
+function show(id) {
+  if (current) { const old = current; old.classList.remove('in'); setTimeout(() => { if (current !== old) old.hidden = true; }, 900); }
+  const el = $(id); el.hidden = false; requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('in')));
+  current = el;
+}
+function hideAll() { if (current) { const old = current; old.classList.remove('in'); setTimeout(() => { if (current === null) old.hidden = true; }, 900); current = null; } }
+
+const S = { mode: 'start', modeT: 0, world: 'tide', minutes: 5, sessionStart: 0, sessionLen: 300, endT: 0 };
+function setMode(m) { S.mode = m; S.modeT = clock(); }
+
+/* start */
+$('#begin').addEventListener('click', () => {
+  initAudio();
+  if (AC) { opening = playOnce('audio/opening.mp3', .85, 1.5); ORDER.forEach((k) => getBuffer(WORLDS[k].audio)); getBuffer('audio/bowl-end.mp3'); }
+  hideAll();
+  if (reduceMotion) { setMode('home'); show('#s-home'); } else setMode('fly');
+});
+
+/* home */
+$$('.world').forEach((b) => b.addEventListener('click', () => {
+  S.world = b.dataset.world; $('#worldName').textContent = WORLDS[S.world].name; $('#worldFeel').textContent = WORLDS[S.world].feel;
+  const last = load().lastMinutes || 5;
+  $$('.time').forEach((t) => t.classList.toggle('last', +t.dataset.min === last));
+  setMode('time'); show('#s-time');
+}));
+$('#back').addEventListener('click', () => { setMode('home'); show('#s-home'); });
+$('#fs').addEventListener('click', () => {
+  try { if (document.fullscreenElement) document.exitFullscreen(); else { const p = document.documentElement.requestFullscreen && document.documentElement.requestFullscreen(); if (p && p.catch) p.catch(() => {}); } } catch (e) {}
+});
+
+/* begin a session */
+let wake = null;
+async function keepAwake() { try { if ('wakeLock' in navigator) wake = await navigator.wakeLock.request('screen'); } catch (e) { wake = null; } }
+function startSession(min) {
+  initAudio(); S.minutes = min; S.sessionLen = min * 60;
+  const d = load(); d.lastMinutes = min; save(d);
+  if (opening) { fadeOut(opening, 3); opening = null; }
+  if (bed) fadeOut(bed, 1.5);
+  bed = AC ? playLoop(WORLDS[S.world].audio, .8, 4) : null;
+  keepAwake();
+  setMode('enter'); show('#s-count'); $('#count').textContent = '3';
+}
+$$('.time').forEach((b) => b.addEventListener('click', () => startSession(+b.dataset.min)));
+
+/* session controls */
+let hudTimer = null;
+function flashHud() { $('#hud').classList.add('on'); clearTimeout(hudTimer); hudTimer = setTimeout(() => $('#hud').classList.remove('on'), 4000); }
+$('#tapzone').addEventListener('click', flashHud);
+$('#pause').addEventListener('click', () => {
+  if (pausedAt === null) { pausedAt = real(); $('#pause').textContent = 'Resume'; if (AC) AC.suspend(); clearTimeout(hudTimer); $('#hud').classList.add('on'); }
+  else { pausedTotal += real() - pausedAt; pausedAt = null; $('#pause').textContent = 'Pause'; if (AC) AC.resume(); flashHud(); }
+});
+$('#endNow').addEventListener('click', () => finish(true));
+
+function finish(early) {
+  if (pausedAt !== null) { pausedTotal += real() - pausedAt; pausedAt = null; $('#pause').textContent = 'Pause'; if (AC) AC.resume(); }
+  const done = early ? clamp(clock() - S.sessionStart, 0, S.sessionLen) : S.sessionLen;
+  S.doneMin = Math.round(done / 6) / 10;
+  if (AC) playOnce('audio/bowl-end.mp3', .9, 0);
+  if (bed) { fadeOut(bed, 9); bed = null; }
+  try { wake && wake.release(); } catch (e) {} wake = null;
+  $('#hud').classList.remove('on');
+  setMode('end'); hideAll();
+  $('#feelBlock').hidden = false; $('#doneBlock').hidden = true; $('#companion').hidden = true;
+  setTimeout(() => { if (S.mode === 'end') show('#s-end'); }, 2600);
+}
+
+/* end: how do you feel */
+function weekDays(sessions) {
+  const days = new Set(); const now = new Date();
+  for (let i = 0; i < 7; i++) { const d = new Date(now); d.setDate(now.getDate() - i); days.add(dayKey(d)); }
+  return new Set(sessions.filter((s) => days.has(s.d)).map((s) => s.d)).size;
+}
+const ORD = ['', 'first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh'];
+$$('.chip').forEach((c) => c.addEventListener('click', () => {
+  const d = load(); d.sessions = d.sessions || [];
+  if (S.doneMin > 0) d.sessions.push({ d: dayKey(new Date()), m: S.doneMin, w: S.world, f: +c.dataset.feel });
+  save(d);
+  const n = d.sessions.length, wk = weekDays(d.sessions);
+  const mins = S.doneMin >= 1 ? (Math.round(S.doneMin) + (Math.round(S.doneMin) === 1 ? ' minute' : ' minutes')) : 'A moment';
+  const feelLine = c.dataset.feel === '0' ? 'That’s fine. It often gets easier with practice.' : 'Your body did that. Remember this feeling.';
+  $('#doneTitle').textContent = 'Welcome back';
+  $('#doneText').textContent = `${mins} of slower breathing. ${feelLine} ` + (n === 1 ? 'Your first session.' : (wk > 1 ? `Your ${ORD[wk] || wk + 'th'} day this week.` : 'A good day to begin again.'));
+  const egg = { 7: 'Hum came by to say well done. Seven sessions!', 21: 'Hum is back. Twenty-one sessions of slower breathing.', 40: 'Forty sessions. Hum brought the whole family.' }[n];
+  $('#companion').hidden = !egg; if (egg) $('#companionText').textContent = egg;
+  $('#feelBlock').hidden = true; $('#doneBlock').hidden = false;
+}));
+$('#again').addEventListener('click', () => startSession(S.minutes));
+$('#home').addEventListener('click', () => { setMode('home'); show('#s-home'); });
+
+/* sheets */
+function openSheet(name) {
+  if (name === 'progress') renderProgress();
+  const el = $('#sh-' + name); el.hidden = false; const btn = el.querySelector('.close'); btn && btn.focus();
+}
+$$('[data-open]').forEach((b) => b.addEventListener('click', () => openSheet(b.dataset.open)));
+$$('.sheet').forEach((s) => {
+  s.addEventListener('click', (e) => { if (e.target === s || e.target.classList.contains('close')) s.hidden = true; });
+});
+addEventListener('keydown', (e) => { if (e.key === 'Escape') $$('.sheet').forEach((s) => (s.hidden = true)); });
+function renderProgress() {
+  const d = load(), ss = d.sessions || [], days = new Set(ss.map((s) => s.d));
+  const box = $('#dots'); box.textContent = '';
+  const now = new Date();
+  for (let i = 27; i >= 0; i--) {
+    const day = new Date(now); day.setDate(now.getDate() - i);
+    const el = document.createElement('div'); el.className = 'dot' + (days.has(dayKey(day)) ? ' on' : '') + (i === 0 ? ' today' : '');
+    el.title = day.toDateString(); box.appendChild(el);
+  }
+  const mins = ss.reduce((a, s) => a + s.m, 0);
+  const rated = ss.filter((s) => s.f !== undefined), calmer = rated.filter((s) => s.f >= 1).length;
+  let streak = 0; for (let i = 0; ; i++) { const day = new Date(now); day.setDate(now.getDate() - i); if (days.has(dayKey(day))) streak++; else if (i > 0) break; }
+  $('#stSessions').textContent = ss.length;
+  $('#stMinutes').textContent = Math.round(mins);
+  $('#stCalmer').textContent = rated.length ? `${calmer} of ${rated.length}` : '–';
+  $('#stStreak').textContent = streak;
+  $('#pNote').textContent = ss.length ? (streak >= 7 ? 'A full week. Your breath knows the way now.' : 'Every session counts, even one minute. Missed days simply stay open.') : 'Your sessions will appear here. Try a short one each day for a week and notice how you feel.';
+}
+
+/* share */
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('on'); setTimeout(() => t.classList.remove('on'), 2400); }
+$$('[data-share]').forEach((b) => b.addEventListener('click', async () => {
+  const url = SHARE_URL || location.href.split('#')[0];
+  const data = { title: 'Thetascape', text: 'A few minutes of slower breathing. Pick a world and follow the light.', url };
+  try { if (navigator.share) { await navigator.share(data); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
+  try { await navigator.clipboard.writeText(url); toast('Link copied'); } catch (e) { toast(url); }
+}));
+
+/* ---------- the render loop ---------- */
+const warp = Array.from({ length: 220 }, () => ({ x: (Math.random() * 2 - 1), y: (Math.random() * 2 - 1), z: Math.random() * 1.4 + .1 }));
+let lastT = clock(), countShown = 3;
+function frame() {
+  const t = clock(), dt = Math.min(.05, t - lastT); lastT = t;
+  const e = t - S.modeT;
+  cx.setTransform(1, 0, 0, 1, 0, 0);
+  switch (S.mode) {
+    case 'start': {
+      drawSky(cx, W, H, t, .7);
+      drawStar(cx, W / 2, H / 2, DPR * 4.2, 1, t);
+      break;
+    }
+    case 'fly': {
+      cx.fillStyle = '#0E1122'; cx.fillRect(0, 0, W, H);
+      const sp = .25 + 1.6 * Math.sin(Math.PI * clamp(e / 3, 0, 1));
+      cx.lineCap = 'round';
+      for (const p of warp) {
+        const z0 = p.z; p.z -= dt * sp; if (p.z < .06) { p.z = 1.5; p.x = Math.random() * 2 - 1; p.y = Math.random() * 2 - 1; continue; }
+        const k = Math.max(W, H) * .5;
+        cx.strokeStyle = `rgba(232,228,244,${clamp((1.5 - p.z) * .6, 0, .8)})`; cx.lineWidth = DPR * clamp(1.6 - p.z, .4, 1.6);
+        cx.beginPath(); cx.moveTo(W / 2 + p.x / z0 * k, H / 2 + p.y / z0 * k); cx.lineTo(W / 2 + p.x / p.z * k, H / 2 + p.y / p.z * k); cx.stroke();
+      }
+      ORDER.forEach((key, i) => {
+        const s0 = 1.0 + i * .42, p = (e - s0) / .66;
+        if (p > 0 && p < 1) drawWorld(cx, key, W, H, t, .5, 1.7 - .6 * p, Math.sin(Math.PI * p) * .85);
+      });
+      if (e < 1.5) {
+        const letters = 'THETASCAPE'.split(''), z = 2.4 - 2.15 * Math.pow(clamp(e / 1.45, 0, 1), 2.2);
+        const fs = Math.min(W, H) * .05 / z, a = clamp(e / .35, 0, 1) * clamp((z - .25) / .35, 0, 1);
+        cx.font = `300 ${fs}px Jost, 'Avenir Next', sans-serif`; cx.textAlign = 'center'; cx.textBaseline = 'middle';
+        cx.fillStyle = `rgba(236,235,242,${a})`;
+        letters.forEach((ch, i) => { const x = (i - 4.5) * Math.min(W, H) * .068 / z; cx.fillText(ch, W / 2 + x, H / 2); });
+      }
+      if (e > 2.6) { cx.fillStyle = `rgba(14,17,34,${clamp((e - 2.6) / .4, 0, 1)})`; cx.fillRect(0, 0, W, H); }
+      if (e >= 3) { setMode('home'); show('#s-home'); }
+      break;
+    }
+    case 'home': {
+      drawSky(cx, W, H, t, 1);
+      const minis = $$('.world canvas');
+      minis.forEach((c) => {
+        const g = c.getContext('2d'); if (!c.width) { c.width = Math.round(c.clientWidth * DPR) || 1; c.height = Math.round(c.clientHeight * DPR) || 1; }
+        const key = c.parentElement.dataset.world, bb = .5 + .5 * Math.sin(t * .63);
+        g.setTransform(1, 0, 0, 1, 0, 0); DRAW[key](g, c.width, c.height, t, bb);
+      });
+      break;
+    }
+    case 'time': {
+      drawWorld(cx, S.world, W, H, t, .5 + .5 * Math.sin(t * .63), 1.08, .55);
+      cx.fillStyle = 'rgba(14,17,34,.35)'; cx.fillRect(0, 0, W, H);
+      break;
+    }
+    case 'enter': {
+      const p = clamp(e / 3, 0, 1);
+      drawSky(cx, W, H, t, 1 - p);
+      drawWorld(cx, S.world, W, H, t, .3, 1.5 - .5 * ease(p), ease(p));
+      const n = 3 - Math.floor(e);
+      if (n !== countShown && n >= 1) { countShown = n; $('#count').textContent = String(n); }
+      if (e >= 3) { countShown = 3; breathT0 = clock(); setMode('guide'); show('#s-guide'); }
+      break;
+    }
+    case 'guide': case 'eyes': case 'session': {
+      const br = breath(t);
+      drawWorld(cx, S.world, W, H, t, br.b, 1, 1);
+      let bright = 1;
+      if (S.mode === 'session') bright = .85 + .45 * clamp((t - S.sessionStart) / S.sessionLen, 0, 1);
+      drawBreath(t, 1, bright);
+      if (S.mode === 'guide') {
+        const txt = br.inhale ? 'Breathe in with the light' : 'Breathe out as the circle widens';
+        const gt = $('#guideText'); if (gt.dataset.txt !== txt) { gt.dataset.txt = txt; gt.style.opacity = 0; setTimeout(() => { gt.textContent = txt; gt.style.opacity = 1; }, 350); }
+        $('#guideStep').textContent = (br.n + 1) + ' of 2';
+        if (t - breathT0 >= CYCLE * 2) { setMode('eyes'); show('#s-eyes'); }
+      } else if (S.mode === 'eyes') {
+        if (e >= 6) { S.sessionStart = clock(); setMode('session'); show('#s-session'); }
+      } else {
+        const left = Math.max(0, S.sessionLen - (t - S.sessionStart));
+        $('#left').textContent = Math.floor(left / 60) + ':' + String(Math.floor(left % 60)).padStart(2, '0');
+        if (left <= 0) finish(false);
+      }
+      break;
+    }
+    case 'end': {
+      const br = breath(t), fade = clamp(1 - e / 7, .35, 1);
+      drawWorld(cx, S.world, W, H, t, br.b * fade, 1, 1);
+      cx.fillStyle = `rgba(14,17,34,${.5 * (1 - fade) + .1})`; cx.fillRect(0, 0, W, H);
+      drawBreath(t, clamp(1 - e / 3, 0, 1), 1.3);
+      if (e > 2) drawStar(cx, W / 2, H * .2, DPR * 3.2, clamp((e - 2) / 2, 0, 1) * 1.2, t);
+      break;
+    }
+  }
+  requestAnimationFrame(frame);
+}
+
+resize();
+setMode('start'); show('#s-start');
+requestAnimationFrame(frame);
+})();
+</script>
+
+<script>
+if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+}
+</script>
+</body>
+</html>

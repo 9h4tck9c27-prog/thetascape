@@ -1,0 +1,59 @@
+# Thetascape
+
+Pick a world. Follow the light. Feel calmer in a few minutes.
+
+Thetascape is a small web app for slower breathing. You choose one of four worlds (Grid, Contour, Tide or Bloom), choose 1, 5 or 10 minutes, and follow Epsilon, a point of light that circles at four seconds in and six seconds out. After two guided breaths you close your eyes, and a bowl rings when you're done.
+
+## What's here
+
+| File | What it does |
+| --- | --- |
+| `index.html` | The whole app: screens, the four animated worlds, the breath guide, sound and progress tracking |
+| `manifest.webmanifest` | Lets people add Thetascape to their home screen as an app |
+| `sw.js` | Keeps the app working offline once it has been opened |
+| `icons/` | Home-screen and browser icons |
+
+There's no build step and no framework. The app is one HTML file.
+
+## Sounds
+
+The sound files aren't in this repository because they're licensed separately. To hear the app, add these files to an `audio/` folder next to `index.html`:
+
+| File | Plays |
+| --- | --- |
+| `audio/opening.mp3` | Once, when you tap the star |
+| `audio/grid.mp3` | Looping in the Grid world |
+| `audio/contour.mp3` | Looping in the Contour world |
+| `audio/tide.mp3` | Looping in the Tide world |
+| `audio/bloom.mp3` | Looping in the Bloom world |
+| `audio/bowl-end.mp3` | Once, when a session ends |
+
+Without them the app still runs, silently. World sounds loop with an 8-second crossfade, so any length works.
+
+## Run it locally
+
+```sh
+python3 -m http.server 8000
+```
+
+Then open http://localhost:8000. Opening `index.html` directly as a file also works, but offline caching only starts when it's served.
+
+## Put it online with GitHub Pages
+
+1. In the repository on GitHub, open **Settings → Pages**.
+2. Under **Build and deployment**, choose **Deploy from a branch**, pick `main` and the root folder, then **Save**.
+3. After a minute the app is live at `https://<your-username>.github.io/thetascape/`.
+
+Because the sounds are excluded from this public repository, a site published this way will be silent until the sounds are hosted somewhere you're licensed to put them.
+
+## Before launch
+
+- Fill in the placeholders in the Privacy and Terms sheets in `index.html`: `[CONTACT EMAIL]`, `[OWNER NAME]` and `[DATE]`.
+- Set `SHARE_URL` near the top of the script to the app's public address.
+- When you change the app, bump `CACHE` in `sw.js` (for example to `thetascape-v2`) so returning visitors get the new version.
+
+## Privacy
+
+Thetascape has no accounts, ads or analytics. Sessions and "how do you feel" answers are stored only in the visitor's own browser.
+
+© Thetascape. All rights reserved.
