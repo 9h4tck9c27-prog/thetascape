@@ -347,6 +347,26 @@ function drawStar(g, x, y, size, bright, t) {
   g.fillStyle = grd; g.beginPath(); g.arc(x, y, s * 1.6, 0, 6.283); g.fill();
 }
 
+// Each side rests dim, brightens as the light passes and slowly fades back.
+function glowSquare(C, sinceAt, width) {
+  const N = 28;
+  cx.lineWidth = width; cx.lineCap = 'butt';
+  for (let k = 0; k < 4; k++) {
+    const a = C[k], b2 = C[(k + 1) % 4];
+    for (let i = 0; i < N; i++) {
+      const u0 = (k + i / N) / 4, d = sinceAt((k + (i + .5) / N) / 4);
+      if (d === null) continue;
+      const glow = Math.exp(-d / 2.8);
+      cx.strokeStyle = `rgba(255,248,232,${.3 + .65 * glow})`;
+      cx.beginPath();
+      cx.moveTo(a[0] + (b2[0] - a[0]) * i / N, a[1] + (b2[1] - a[1]) * i / N);
+      cx.lineTo(a[0] + (b2[0] - a[0]) * (i + 1) / N, a[1] + (b2[1] - a[1]) * (i + 1) / N);
+      cx.stroke();
+      if (glow > .25) { cx.strokeStyle = `rgba(244,217,166,${.18 * glow})`; cx.lineWidth = width * 4; cx.stroke(); cx.lineWidth = width; }
+    }
+  }
+}
+
 /* The opening star: layered, slowly turning light with sparkles orbiting in depth. */
 const orbit = Array.from({ length: 34 }, (_, i) => ({ r: .55 + Math.random() * 1.1, sp: (.18 + Math.random() * .35) * (i % 3 ? 1 : -1), ph: Math.random() * 6.283, tilt: .22 + Math.random() * .35, sz: .5 + Math.random() * .9, tw: 1.5 + Math.random() * 3, bob: Math.random() * 6.283 }));
 const dust = Array.from({ length: 46 }, () => ({ x: (Math.random() - .5) * 2, life: Math.random(), sp: .05 + Math.random() * .09, sz: .4 + Math.random() * .9, sway: Math.random() * 6.283 }));
@@ -358,8 +378,8 @@ function sparkle(g, x, y, s, a, rot) {
   g.beginPath(); g.moveTo(-s * 3.2, 0); g.lineTo(s * 3.2, 0); g.moveTo(0, -s * 3.2); g.lineTo(0, s * 3.2); g.stroke();
   g.restore();
 }
-function drawMagicStar(g, x, y, size, t) {
-  const R = size * 26;
+function drawMagicStar(g, x, y, size, t, spread) {
+  const R = size * 26 * (spread || 1);
   const glint = Math.pow(Math.max(0, 1 - (t % 3.1) / .7), 2);
   const breathe = .5 + .5 * Math.sin(t * .9);
   // soft aura with a cool rim, like light through a lens
@@ -512,8 +532,7 @@ function drawBreath(t, alpha, bright) {
   cx.fillStyle = 'rgba(8,10,22,.22)'; cx.fillRect(0, 0, W, H);
   cx.fillStyle = 'rgba(8,10,22,.5)'; cx.fillRect(x0, y0, s, s);
   cx.fillStyle = `rgba(244,217,166,${.06 * br.b})`; cx.fillRect(x0, y0, s, s);
-  cx.strokeStyle = 'rgba(255,255,255,.82)'; cx.lineWidth = Math.max(2, DPR * 2); cx.lineJoin = 'round';
-  cx.strokeRect(x0, y0, s, s);
+  glowSquare(C, (u) => (((br.u - u) % 1) + 1) % 1 * CYCLE, Math.max(2, DPR * 2));
   for (let k = 0; k < 4; k++) {
     const cnt = br.local / (SIDE / COUNTS);
     for (let q = 0; q < COUNTS; q++) {
@@ -533,7 +552,7 @@ function drawBreath(t, alpha, bright) {
     cx.beginPath(); cx.arc(x, y, DPR * 3.4 * (1 - i / 20), 0, 6.283); cx.fill();
   }
   const [x, y] = at(br.u);
-  drawStar(cx, x, y, DPR * 5, Math.max(1.1, bright), t);
+  drawMagicStar(cx, x, y, DPR * 3.4 * (.9 + .15 * bright), t, .62);
   cx.restore();
   return br;
 }
@@ -546,14 +565,12 @@ function drawSquareIn(t, prog, alpha) {
   cx.save(); cx.globalAlpha = alpha;
   cx.fillStyle = `rgba(8,10,22,${.22 * prog})`; cx.fillRect(0, 0, W, H);
   cx.fillStyle = `rgba(8,10,22,${.5 * prog})`; cx.fillRect(x0, y0, s, s);
-  cx.strokeStyle = 'rgba(255,255,255,.82)'; cx.lineWidth = Math.max(2, DPR * 2); cx.lineJoin = 'round'; cx.lineCap = 'round';
-  cx.beginPath(); cx.moveTo(C[0][0], C[0][1]);
+  glowSquare(C, (u) => (u <= prog ? (prog - u) * WIND : null), Math.max(2, DPR * 2));
   const corners = Math.floor(prog * 4);
-  for (let k = 1; k <= corners; k++) cx.lineTo(C[k % 4][0], C[k % 4][1]);
   let tip;
   if (prog >= 1) { tip = C[0]; } else { const k = corners, f = prog * 4 - k, a = C[k], b2 = C[(k + 1) % 4]; tip = [a[0] + (b2[0] - a[0]) * f, a[1] + (b2[1] - a[1]) * f]; }
-  cx.lineTo(tip[0], tip[1]); cx.stroke();
-  drawStar(cx, tip[0], tip[1], DPR * 5, .6 + .5 * prog, t);
+  cx.globalAlpha = alpha * clamp(prog * 6, 0, 1);
+  drawMagicStar(cx, tip[0], tip[1], DPR * 3.4, t, .62);
   cx.restore();
 }
 
