@@ -539,7 +539,7 @@ function drawBreath(t, alpha, bright) {
 }
 
 // The wind-up: the light draws the square around the words, then breathing begins where it finished.
-const WIND = 12, WIND_LINES = ['Find a comfortable seat', 'Breathe through your nose', 'Breathe into your abdomen'];
+const WIND = 22, WIND_LINES = ['Find a comfortable seat', 'Breathe through your nose', 'Breathe into your abdomen', 'Now fully exhale'];
 function drawSquareIn(t, prog, alpha) {
   const s = Math.min(W * .74, H * .5), x0 = W / 2 - s / 2, y0 = H / 2 - s / 2;
   const C = [[x0, y0 + s], [x0, y0], [x0 + s, y0], [x0 + s, y0 + s]];
