@@ -769,10 +769,31 @@ function flashHud() { $('#hud').classList.add('on'); clearTimeout(hudTimer); hud
 document.addEventListener('pointerdown', (e) => { if (PRACTICE.indexOf(S.mode) !== -1 && !e.target.closest('#hud')) flashHud(); });
 let lastMove = 0;
 addEventListener('pointermove', (e) => { if (S.mode !== 'session' || e.pointerType === 'touch') return; const n = performance.now(); if (n - lastMove > 500) { lastMove = n; flashHud(); } });
-$('#pause').addEventListener('click', () => {
-  if (pausedAt === null) { pausedAt = real(); $('#pause').textContent = 'Resume'; if (AC) AC.suspend(); if (bed) bed.a.pause(); clearTimeout(hudTimer); $('#hud').classList.add('on'); }
-  else { pausedTotal += real() - pausedAt; pausedAt = null; $('#pause').textContent = 'Pause'; if (AC) AC.resume(); if (bed) { const p = bed.a.play(); if (p && p.catch) p.catch(() => {}); } flashHud(); }
-});
+function pauseSession() { if (pausedAt !== null) return; pausedAt = real(); $('#pause').textContent = 'Resume'; if (AC) AC.suspend(); if (bed) bed.a.pause(); clearTimeout(hudTimer); $('#hud').classList.add('on'); setPlaybackState('paused'); }
+function resumeSession() { if (pausedAt === null) return; pausedTotal += real() - pausedAt; pausedAt = null; $('#pause').textContent = 'Pause'; if (AC) AC.resume(); if (bed) { const p = bed.a.play(); if (p && p.catch) p.catch(() => {}); } if (!wake) keepAwake(); flashHud(); setPlaybackState('playing'); }
+$('#pause').addEventListener('click', () => (pausedAt === null ? pauseSession() : resumeSession()));
+function setPlaybackState(st) { try { if ('mediaSession' in navigator) navigator.mediaSession.playbackState = st; } catch (e) {} }
+
+// Leaving the app (switching apps, locking the phone, closing the tab) pauses the session and all sound.
+// Coming back shows it paused with Resume ready, so nothing plays or counts down while you're away.
+function onAway() {
+  if (PRACTICE.indexOf(S.mode) !== -1) pauseSession();
+  else { if (AC && AC.state === 'running') AC.suspend(); if (bed) bed.a.pause(); }
+  wake = null; // the browser drops the screen lock when hidden
+}
+function onBack() {
+  if (PRACTICE.indexOf(S.mode) !== -1) { flashHud(); $('#hud').classList.add('on'); clearTimeout(hudTimer); return; } // stays paused until Resume
+  if (AC && AC.state === 'suspended') AC.resume();
+}
+document.addEventListener('visibilitychange', () => (document.hidden ? onAway() : onBack()));
+addEventListener('pagehide', onAway);
+// Lock-screen and headphone controls follow the same pause and resume.
+try {
+  if ('mediaSession' in navigator) {
+    navigator.mediaSession.setActionHandler('pause', () => { if (PRACTICE.indexOf(S.mode) !== -1) pauseSession(); else if (bed) bed.a.pause(); });
+    navigator.mediaSession.setActionHandler('play', () => { if (PRACTICE.indexOf(S.mode) !== -1 && !document.hidden) resumeSession(); else if (bed && PRACTICE.indexOf(S.mode) === -1) bed.a.pause(); });
+  }
+} catch (e) {}
 $('#endNow').addEventListener('click', () => finish(true));
 
 function finish(early) {
