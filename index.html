@@ -239,13 +239,21 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--light);outline-offs
 <div class="sheet" id="sh-add" role="dialog" aria-modal="true" aria-labelledby="aTitle" hidden>
   <div class="card">
     <h2 id="aTitle">Keep it close</h2>
-    <p>Add Thetascape to your home screen and it opens full screen, like an app.</p>
-    <p><b style="color:var(--mist)">iPhone and iPad</b></p>
-    <ol><li>Open this page in Safari.</li><li>Tap the Share button.</li><li>Choose “Add to Home Screen”.</li></ol>
-    <p><b style="color:var(--mist)">Android</b></p>
-    <ol><li>Open this page in Chrome.</li><li>Tap the ⋮ menu.</li><li>Choose “Add to Home screen” or “Install app”.</li></ol>
-    <p><b style="color:var(--mist)">Computer</b></p>
-    <p>In Chrome or Edge, use the install icon at the right of the address bar.</p>
+    <p id="addIntro">Add Thetascape to your home screen and it opens full screen, like an app.</p>
+    <p id="addWhere" style="color:var(--mist);font-weight:600"></p>
+    <ol id="addSteps"></ol>
+    <p id="addNote" hidden></p>
+    <button class="btn1" id="installBtn" hidden style="align-self:flex-start">Install Thetascape</button>
+    <details id="addOther" style="color:var(--soft);font-size:16px">
+      <summary style="cursor:pointer;color:var(--mist)">Other phones and browsers</summary>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px">
+        <p><b style="color:var(--mist)">iPhone, Safari:</b> tap ••• next to the address bar, then Share, then “Add to Home Screen”.</p>
+        <p><b style="color:var(--mist)">iPhone, Chrome:</b> tap the Share button in the address bar, then “Add to Home Screen”.</p>
+        <p><b style="color:var(--mist)">Android, Chrome:</b> tap ⋮, then “Add to Home screen” or “Install app”.</p>
+        <p><b style="color:var(--mist)">Computer, Chrome or Edge:</b> click the install icon at the right of the address bar.</p>
+        <p><b style="color:var(--mist)">Mac, Safari:</b> choose File, then “Add to Dock”.</p>
+      </div>
+    </details>
     <button class="close">Close</button>
   </div>
 </div>
@@ -775,6 +783,7 @@ $('#home').addEventListener('click', () => { setMode('home'); show('#s-home'); }
 /* sheets */
 function openSheet(name) {
   if (name === 'progress') renderProgress();
+  if (name === 'add') renderAdd();
   const el = $('#sh-' + name); el.hidden = false; const btn = el.querySelector('.close'); btn && btn.focus();
 }
 $$('[data-open]').forEach((b) => b.addEventListener('click', () => openSheet(b.dataset.open)));
@@ -800,6 +809,49 @@ function renderProgress() {
   $('#stStreak').textContent = streak;
   $('#pNote').textContent = ss.length ? (streak >= 7 ? 'A full week. Your breath knows the way now.' : 'Every session counts, even one minute. Missed days simply stay open.') : 'Your sessions will appear here. Try a short one each day for a week and notice how you feel.';
 }
+
+
+/* Add to home screen: steps for the browser this person is actually using */
+let installEvt = null;
+addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installEvt = e; });
+addEventListener('appinstalled', () => { installEvt = null; toast('Thetascape is on your home screen'); });
+function addInfo() {
+  const ua = navigator.userAgent || '';
+  const ios = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const android = /Android/.test(ua);
+  const standalone = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+  const inApp = /FBAN|FBAV|Instagram|Line\/|Twitter|TikTok|musical_ly|Snapchat|LinkedInApp|Pinterest/.test(ua);
+  if (standalone) return { where: '', steps: [], note: 'Thetascape is already on your home screen. Open it from there any time.' };
+  if (inApp) return { where: 'You’re viewing this inside another app', steps: ['Tap the ••• or menu button in this app.', 'Choose “Open in Safari” or “Open in browser”.', 'Come back to this screen to finish.'] };
+  if (ios) {
+    if (/CriOS/.test(ua)) return { where: 'iPhone or iPad, Chrome', steps: ['Tap the Share button in the address bar (a square with an arrow).', 'Tap “Add to Home Screen”.', 'Tap Add.'] };
+    if (/FxiOS|EdgiOS|OPiOS|DuckDuckGo/.test(ua)) return { where: 'iPhone or iPad', steps: ['Open this browser’s menu and tap Share.', 'Tap “Add to Home Screen”.', 'Tap Add.'], note: 'Don’t see it? Open this page in Safari and try there.' };
+    return { where: 'iPhone or iPad, Safari', steps: ['Tap ••• next to the address bar.', 'Tap Share.', 'Scroll down and tap “Add to Home Screen”.', 'Leave “Open as Web App” on, then tap Add.'], note: 'On an older iPhone, tap the Share button at the bottom of the screen instead.' };
+  }
+  if (android) {
+    if (/SamsungBrowser/.test(ua)) return { where: 'Android, Samsung Internet', steps: ['Tap the ☰ menu at the bottom.', 'Tap “Add page to”.', 'Choose “Home screen”.'] };
+    if (/Firefox/.test(ua)) return { where: 'Android, Firefox', steps: ['Tap ⋮ in the corner.', 'Tap “Add app to Home screen” or “Install”.', 'Confirm.'] };
+    return { where: 'Android', steps: installEvt ? [] : ['Tap ⋮ in the top corner.', 'Tap “Add to Home screen” or “Install app”.', 'Tap Install.'], install: !!installEvt };
+  }
+  if (/Edg\//.test(ua)) return { where: 'Microsoft Edge', steps: installEvt ? [] : ['Click the install icon at the right of the address bar.', 'Or open the … menu, then Apps, then “Install this site as an app”.'], install: !!installEvt };
+  if (/Firefox/.test(ua)) return { where: 'Firefox', steps: [], note: 'Firefox on computers can’t install web apps. Bookmark this page, or open it in Chrome, Edge or Safari to install it.' };
+  if (/Chrome\//.test(ua)) return { where: 'Chrome', steps: installEvt ? [] : ['Click the install icon at the right of the address bar.', 'Or open the ⋮ menu, then “Cast, save, and share”, then “Install page as app”.'], install: !!installEvt };
+  if (/Safari\//.test(ua)) return { where: 'Mac, Safari', steps: ['In the menu bar, choose File.', 'Choose “Add to Dock”.', 'Click Add.'] };
+  return { where: '', steps: ['Open your browser’s menu.', 'Look for “Add to Home screen” or “Install app”.'] };
+}
+function renderAdd() {
+  const info = addInfo();
+  $('#addWhere').textContent = info.where; $('#addWhere').hidden = !info.where;
+  const ol = $('#addSteps'); ol.textContent = '';
+  info.steps.forEach((s) => { const li = document.createElement('li'); li.textContent = s; ol.appendChild(li); });
+  ol.hidden = !info.steps.length;
+  $('#addNote').textContent = info.note || ''; $('#addNote').hidden = !info.note;
+  $('#installBtn').hidden = !info.install;
+}
+$('#installBtn').addEventListener('click', async () => {
+  if (!installEvt) return; installEvt.prompt();
+  try { await installEvt.userChoice; } catch (e) {} installEvt = null; renderAdd();
+});
 
 /* share */
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('on'); setTimeout(() => t.classList.remove('on'), 2400); }
