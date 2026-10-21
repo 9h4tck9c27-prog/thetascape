@@ -50,8 +50,7 @@ A site published this way plays the four world sounds. The opening flute and clo
 ## Before launch
 
 - Fill in the placeholders in the Privacy and Terms sheets in `index.html`: `[CONTACT EMAIL]`, `[OWNER NAME]` and `[DATE]`.
-- Set `SHARE_URL` near the top of the script to the app's public address.
-- The sharing tags in `index.html` point to `https://9h4tck9c27-prog.github.io/thetascape/`. If the app moves to its own domain, update the `og:url`, `og:image` and `twitter:image` addresses.
+- The sharing tags and `SHARE_URL` in `index.html` point to `https://thetascapemeditation.netlify.app/`. If the app moves to its own domain, update the `og:url`, `og:image` and `twitter:image` addresses.
 - When you change the app, bump `CACHE` in `sw.js` (for example to `thetascape-v2`) so returning visitors get the new version.
 
 ## Privacy
