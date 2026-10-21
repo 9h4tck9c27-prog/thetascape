@@ -62,7 +62,7 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--light);outline-offs
 .home-top{display:flex;flex-direction:column;align-items:center;gap:14px;padding-top:8px}
 .home-top .mark{font-size:clamp(26px,3.6vw,38px)}
 .pick{font-size:clamp(24px,3vw,30px);font-weight:600;color:#FFFFFF;margin-top:6px}
-.worlds{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;width:min(100%,460px,calc(100dvh - 430px));min-width:240px;flex-shrink:0}
+.worlds{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;width:min(100%,460px,calc(100dvh - 410px));min-width:240px;flex-shrink:0}
 @media (max-width:899px){.worlds .world{aspect-ratio:1/1}}
 @media (min-width:900px){.worlds{grid-template-columns:repeat(4,minmax(0,1fr));width:min(100%,1080px,calc((100dvh - 390px) * 3));gap:20px}}
 .world{position:relative;aspect-ratio:3/4;border-radius:22px;overflow:hidden;border:1px solid var(--line);transition:transform .6s ease,border-color .6s ease}
@@ -75,8 +75,10 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--light);outline-offs
 .text-btn{font-size:18px;color:var(--soft);padding:8px 2px}
 .text-btn:hover{color:var(--mist)}
 .row.tight{gap:10px}
-.btn2{border:1.5px solid rgba(255,255,255,.4);border-radius:999px;padding:10px 18px;font-size:16px;font-weight:500;color:#FFFFFF;background:rgba(18,21,42,.45);backdrop-filter:blur(6px);transition:border-color .3s,background .3s}
-.btn2:hover{border-color:var(--light);background:rgba(244,217,166,.1)}
+.btn1{border:1px solid rgba(255,255,255,.22);border-radius:999px;padding:10px 22px;font-size:17px;font-weight:500;color:rgba(242,241,247,.9);background:transparent;transition:border-color .3s,color .3s}
+.btn1:hover{border-color:rgba(244,217,166,.6);color:#FFFFFF}
+.btn2{border:1px solid rgba(255,255,255,.1);border-radius:999px;padding:7px 14px;font-size:15px;font-weight:400;color:rgba(218,220,234,.7);background:transparent;transition:border-color .3s,color .3s}
+.btn2:hover{border-color:rgba(255,255,255,.3);color:#FFFFFF}
 .tiny{font-size:16px;color:var(--dim);padding:6px 2px}
 #fs{position:fixed;top:calc(14px + env(safe-area-inset-top,0px));right:max(16px,env(safe-area-inset-right,0px));width:40px;height:40px;border-radius:50%;opacity:.55}
 #fs:hover{opacity:1}
@@ -155,7 +157,7 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--light);outline-offs
     <button class="world" data-world="bloom"><canvas></canvas><span>Bloom</span></button>
   </div>
   <div class="home-foot">
-    <button class="cta" data-open="progress">Track your data</button>
+    <button class="btn1" data-open="progress">Follow your journey</button>
     <div class="row tight">
       <button class="btn2" data-share>Share app</button>
       <button class="btn2" data-open="add">Add to home screen</button>
