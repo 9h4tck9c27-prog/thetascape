@@ -59,19 +59,26 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--light);outline-offs
 
 /* home */
 #s-home{justify-content:space-between;overflow-y:auto}
-.home-top{display:flex;flex-direction:column;align-items:center;gap:14px;padding-top:8px}
-.home-top .mark{font-size:clamp(26px,3.6vw,38px)}
-.lede{font-size:clamp(23px,3vw,28px);font-weight:400;line-height:1.3;color:#FFFFFF;text-align:center;max-width:25ch;margin-top:4px;text-wrap:balance}
+#s-home{gap:14px;padding-bottom:calc(10px + env(safe-area-inset-bottom,0px))}
+.home-top{display:flex;flex-direction:column;align-items:center;gap:14px;padding-top:4px}
+.brand{display:flex;flex-direction:column;align-items:center;gap:3px}
+.brand .mark{font-size:15px;letter-spacing:.42em;padding-left:.42em;color:#FFFFFF}
+.brand .tagline{font-size:15px;color:var(--soft);letter-spacing:.02em}
+.lede{font-size:clamp(24px,3.2vw,30px);font-weight:400;line-height:1.28;color:#FFFFFF;text-align:center;max-width:24ch;text-wrap:balance}
 .pick{font-size:16px;font-weight:500;letter-spacing:.04em;color:#C9CCDD;margin-top:8px}
-.worlds{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;width:min(100%,460px,calc(100dvh - 460px));min-width:240px;flex-shrink:0}
-@media (max-width:899px){.worlds .world{aspect-ratio:1/1}}
-@media (min-width:900px){.worlds{grid-template-columns:repeat(4,minmax(0,1fr));width:min(100%,1080px,calc((100dvh - 470px) * 3));gap:20px}}
+.worlds{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;width:min(100%,560px,calc(100dvh - 345px));min-width:240px;flex-shrink:0;margin-block:auto}
+@media (max-width:899px){.worlds{flex:1 1 auto;min-height:min(240px,calc(100dvh - 345px));max-height:calc(min(100vw - 32px,560px) * 1.3);grid-template-rows:1fr 1fr}.worlds .world{aspect-ratio:auto;min-height:0}}
+@media (min-width:900px){.worlds{grid-template-columns:repeat(4,minmax(0,1fr));width:min(100%,1080px,calc((100dvh - 360px) * 3));gap:20px}}
 .world{position:relative;aspect-ratio:3/4;border-radius:22px;overflow:hidden;border:1px solid var(--line);transition:transform .6s ease,border-color .6s ease}
 .world canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 .world span{position:absolute;left:14px;bottom:12px;font-size:20px;font-weight:500;text-shadow:0 1px 8px rgba(0,0,0,.5)}
 .worlds{}
 .world:hover{transform:translateY(-3px);border-color:rgba(244,217,166,.6)}
-.home-foot{display:flex;flex-direction:column;align-items:center;gap:12px;padding-bottom:4px}
+.home-foot{display:flex;flex-direction:column;align-items:center;gap:6px}
+.home-foot .btn1{padding:5px 18px;font-size:15px;font-weight:400;border-color:rgba(255,255,255,.13);color:rgba(236,235,242,.78)}
+.home-foot .btn2{padding:3px 12px;font-size:13px;border-color:rgba(255,255,255,.07);color:rgba(218,220,234,.55)}
+.home-foot .tiny{font-size:13px;padding:2px 2px;opacity:.8}
+.home-foot .row{gap:8px 18px}
 .row{display:flex;gap:22px;flex-wrap:wrap;justify-content:center}
 .text-btn{font-size:18px;color:var(--soft);padding:8px 2px}
 .text-btn:hover{color:var(--mist)}
@@ -147,10 +154,8 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--light);outline-offs
 <section id="s-home" class="screen" hidden>
   <button id="fs" aria-label="Full screen"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C9CCDD" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
   <div class="home-top">
-    <div class="mark">THETASCAPE</div>
-    <div class="sub">Meditation practice</div>
+    <div class="brand"><div class="mark">THETASCAPE</div><div class="tagline">Meditation practice</div></div>
     <div class="lede">Pick a sound, then breathe along with a slow, moving light. It takes as little as a minute.</div>
-    <div class="pick">Choose a soundscape</div>
   </div>
   <div class="worlds">
     <button class="world" data-world="grid"><canvas></canvas><span>Grid</span></button>
