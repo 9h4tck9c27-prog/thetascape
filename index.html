@@ -104,6 +104,7 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--light);outline-offs
 .inbox{max-width:min(70vw,46vh)}
 #s-guide .line,#s-eyes .line,#s-count .line{color:#FFFFFF;font-weight:600;text-shadow:0 2px 14px rgba(0,0,0,.75),0 0 2px rgba(0,0,0,.6)}
 #s-guide .line{font-size:clamp(38px,6.5vw,56px);line-height:1.15;transform:translateY(calc(min(74vw, 50dvh) * -.11))}
+#s-guide .line.long{font-size:clamp(26px,4.6vw,36px);line-height:1.2;transform:translateY(calc(min(74vw, 50dvh) * -.13))}
 #s-count .line{font-size:clamp(30px,5vw,44px);line-height:1.2}
 #guideStep{font-size:22px;font-weight:600;color:#FFFFFF;opacity:.9;text-shadow:0 2px 10px rgba(0,0,0,.7)}
 #s-eyes .line{font-size:clamp(32px,5vw,44px);line-height:1.2}
@@ -303,7 +304,7 @@ const WORLDS = {
   bloom:   { name: 'Bloom',   feel: 'Open and warm',     audio: 'audio/bloom.mp3' }
 };
 const ORDER = ['grid', 'contour', 'tide', 'bloom'];
-const SIDE = 6, COUNTS = 4, CYCLE = SIDE * 4; // a slow four count: 4 counts per side, 6 seconds per side
+const SIDE = 5, COUNTS = 4, CYCLE = SIDE * 4; // a slow four count: 4 counts per side, 5 seconds per side (1.25 s a count)
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => Array.from(document.querySelectorAll(s));
@@ -537,6 +538,8 @@ function drawWorld(g, key, w, h, t, b, scale, alpha) {
 /* ---------- breath: box breathing, SIDE seconds a side ---------- */
 let breathT0 = 0;
 const PHASES = ['Breathe in', 'Hold in', 'Breathe out', 'Hold out'];
+// The first lap spells out exactly what to do on each side; after that the short words are enough.
+const PHASES_FULL = ['Breathe in through your nose, into your abdomen', 'Hold your breath in', 'Breathe out slowly through your nose', 'Hold your breath out'];
 function breath(t) {
   const el = t - breathT0, c = ((el % CYCLE) + CYCLE) % CYCLE, n = Math.floor(el / CYCLE);
   const side = Math.floor(c / SIDE), local = c - side * SIDE, p = local / SIDE;
@@ -594,7 +597,7 @@ function drawBreath(t, alpha, bright, countAt) {
 }
 
 // The wind-up: the light draws the square around the words, then breathing begins where it finished.
-const WIND = 22, WIND_LINES = ['Find a comfortable seat', 'Breathe through your nose', 'Breathe into your abdomen', 'Now fully exhale'];
+const WIND = 9, WIND_LINES = ['Find a comfortable seat', 'Follow the light as you breathe'];
 function drawSquareIn(t, prog, alpha) {
   const s = Math.min(W * .74, H * .5), x0 = W / 2 - s / 2, y0 = H / 2 - s / 2;
   const C = [[x0, y0 + s], [x0, y0], [x0 + s, y0], [x0 + s, y0 + s]];
@@ -944,8 +947,8 @@ function frame() {
       if (S.mode === 'session') bright = .85 + .45 * clamp((t - S.sessionStart) / S.sessionLen, 0, 1);
       drawBreath(t, 1, bright, S.mode === 'session' ? 'center' : S.mode === 'guide' ? 'below' : null);
       if (S.mode === 'guide') {
-        const ahead = breath(t + .25), txt = PHASES[ahead.side];
-        const gt = $('#guideText'); if (gt.dataset.txt !== txt) { gt.dataset.txt = txt; gt.style.opacity = 0; setTimeout(() => { gt.textContent = txt; gt.style.opacity = 1; }, 250); }
+        const ahead = breath(t + .25), full = ahead.n < 1, txt = (full ? PHASES_FULL : PHASES)[ahead.side];
+        const gt = $('#guideText'); if (gt.dataset.txt !== txt) { gt.dataset.txt = txt; gt.style.opacity = 0; setTimeout(() => { gt.textContent = txt; gt.classList.toggle('long', full); gt.style.opacity = 1; }, 250); }
         if (t - breathT0 >= CYCLE * 2) { setMode('eyes'); show('#s-eyes'); }
       } else if (S.mode === 'eyes') {
         if (e >= 6) { S.sessionStart = clock(); setMode('session'); show('#s-session'); }
