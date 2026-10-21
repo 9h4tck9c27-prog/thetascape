@@ -247,7 +247,8 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--light);outline-offs
     <details id="addOther" style="color:var(--soft);font-size:16px">
       <summary style="cursor:pointer;color:var(--mist)">Other phones and browsers</summary>
       <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px">
-        <p><b style="color:var(--mist)">iPhone, Safari:</b> tap ••• next to the address bar, then Share, then “Add to Home Screen”.</p>
+        <p><b style="color:var(--mist)">iPhone, Safari (iOS 26 and 27):</b> tap ••• next to the address bar, then Share, then “Add to Home Screen”.</p>
+        <p><b style="color:var(--mist)">iPhone, Safari (iOS 18 and earlier):</b> tap the Share button at the bottom, then “Add to Home Screen”.</p>
         <p><b style="color:var(--mist)">iPhone, Chrome:</b> tap the Share button in the address bar, then “Add to Home Screen”.</p>
         <p><b style="color:var(--mist)">Android, Chrome:</b> tap ⋮, then “Add to Home screen” or “Install app”.</p>
         <p><b style="color:var(--mist)">Computer, Chrome or Edge:</b> click the install icon at the right of the address bar.</p>
@@ -826,7 +827,10 @@ function addInfo() {
   if (ios) {
     if (/CriOS/.test(ua)) return { where: 'iPhone or iPad, Chrome', steps: ['Tap the Share button in the address bar (a square with an arrow).', 'Tap “Add to Home Screen”.', 'Tap Add.'] };
     if (/FxiOS|EdgiOS|OPiOS|DuckDuckGo/.test(ua)) return { where: 'iPhone or iPad', steps: ['Open this browser’s menu and tap Share.', 'Tap “Add to Home Screen”.', 'Tap Add.'], note: 'Don’t see it? Open this page in Safari and try there.' };
-    return { where: 'iPhone or iPad, Safari', steps: ['Tap ••• next to the address bar.', 'Tap Share.', 'Scroll down and tap “Add to Home Screen”.', 'Leave “Open as Web App” on, then tap Add.'], note: 'On an older iPhone, tap the Share button at the bottom of the screen instead.' };
+    // Safari reports its real version in "Version/NN" (the iOS number in the user agent is frozen).
+    const v = +((ua.match(/Version\/(\d+)/) || [])[1] || 0);
+    if (v && v < 26) return { where: 'iPhone or iPad, Safari', steps: ['Tap the Share button at the bottom of the screen (a square with an arrow).', 'Scroll down and tap “Add to Home Screen”.', 'Tap Add.'] };
+    return { where: 'iPhone or iPad, Safari' + (v >= 26 ? ` (iOS ${v})` : ''), steps: ['Tap ••• next to the address bar.', 'Tap Share.', 'Scroll down and tap “Add to Home Screen”.', 'Leave “Open as Web App” on, then tap Add.'], note: v ? '' : 'On an iPhone older than iOS 26, tap the Share button at the bottom of the screen instead.' };
   }
   if (android) {
     if (/SamsungBrowser/.test(ua)) return { where: 'Android, Samsung Internet', steps: ['Tap the ☰ menu at the bottom.', 'Tap “Add page to”.', 'Choose “Home screen”.'] };
